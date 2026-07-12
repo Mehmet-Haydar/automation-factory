@@ -41,7 +41,7 @@ gitpython>=3.1.0,<4.0   # optional; the subprocess git command also works
 keyring>=24.0.0,<27.0   # stores API keys in OS credential manager (optional but recommended)
 
 # Test framework (for v3.0.0-beta)
-pytest>=7.4.0,<10.0
+pytest>=9.1.1,<10.0
 pytest-cov>=7.1.0,<8.0
 
 # Linting (for development)
