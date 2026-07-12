@@ -52,7 +52,7 @@ mypy>=1.5.0,<3.0
 reportlab>=5.0.0,<6.0      # optional; without it generators fall back to Markdown
 
 # PDF reading (for legacy schematic documents — future feature)
-pdfplumber>=0.10.0,<1.0  # optional
+pdfplumber>=0.11.10,<1.0  # optional
 pytesseract>=0.3.13,<1.0 # OCR (for scanned documents) — requires system tesseract
 
 # Mermaid diagram validation (for RD03)
