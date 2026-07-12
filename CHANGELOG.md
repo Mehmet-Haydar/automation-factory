@@ -118,7 +118,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/) — SemVer.
 
 ## [3.8.1] - 2026-06-14
 
-> Commits: `d64e14f` (security) · `0d345d1` (concurrency). 1383 tests passing.
+> Security + concurrency hardening. 1383 tests passing.
 
 ### Fixed — Security hardening (independent müfettiş AUDIT-001..005)
 
@@ -136,7 +136,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/) — SemVer.
 
 ## [3.8.0] - 2026-06-14
 
-> Tag: `v3.8.0` at commit `e670aa3`. 1358 tests passing.
+> 1358 tests passing.
 
 ### Added — RAG-KB: Knowledge Base retrieval pipeline (offline-first)
 
@@ -200,7 +200,7 @@ Full suite: **1358 passing**.
 
 ## [3.7.1] - 2026-06-14
 
-> Tag: `v3.7.1` at commit `6a6c2ba`.
+> Pre-final audit fixes.
 
 ### Fixed — pre-final-test comprehensive audit (independent müfettiş)
 
@@ -218,7 +218,7 @@ Full suite: **1358 passing**.
 
 ## [3.7.0] - 2026-06-13
 
-> Merged from `feature/sat-v2-2026-06-12`. Code verified (1305 tests + e2e CLI
+> Code verified (1305 tests + e2e CLI
 > smoke); the engineer-review items (SAT safety scenario DE/TR wording, SISTEMA
 > warning→blocker decision, CE template text, IEC 62443/62682 content) are
 > recorded in the internal safety-change / audit log (not shipped in this public tree) and
@@ -714,7 +714,7 @@ This release adds a **major new layer** on top of the v3.0.0-alpha foundation: a
 - `action_panel.py` action handlers extended (~70 LOC added)
 - `file_tree.py` refinements (filter, expand-by-context)
 - Library panel: `FB_Motor_Standard.scl` (192 lines, multi-instance) + `.meta.json` (block schema)
-- Fix: PanedWindow crash on Windows — removed unsupported `highlightthickness=` parameter (commit `3ec0b54`)
+- Fix: PanedWindow crash on Windows — removed unsupported `highlightthickness=` parameter
 
 **Files added (this release):**
 - `start.bat` (consolidated launcher)
@@ -797,7 +797,7 @@ This release adds a completely new content layer on top of v2.4.0. The existing 
 - `USER_GUIDE_BIG_PICTURE.md` — comprehensive usage guide
 - Final PROGRESS_TRACKER + CHANGELOG + _BUILD_LOG updates
 
-**Total:** 7 commits (`60732da` init + `2621e4f` + `c7d87d4` + `113b80e` + `4bb8acb` + `538405c` + Session 6 final commit), ~98 new files, ~20K+ lines.
+**Total:** 7 commits, ~98 new files, ~20K+ lines.
 
 ### Decision Log Additions
 
