@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "rd11_hmi.schema.json",
+  "title": "RD11 — HMI (two sheets)",
+  "description": "Per-project HMI screens + tags. ISA-101. Spec: MDSCHEMA_RAWDATA_11_HMI.md",
+  "type": "object",
+  "required": ["project_id", "ScreenList", "TagList"],
+  "properties": {
+    "project_id": { "type": "string" },
+    "output_language": { "type": "string", "enum": ["TR", "EN", "DE"] },
+    "ScreenList": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ScreenID", "ScreenName", "ScreenType", "AccessLevel", "Title_EN", "Status"],
+        "properties": {
+          "ScreenID": { "type": "string", "pattern": "^SCR\\d{3}$" },
+          "ScreenName": { "type": "string", "minLength": 1 },
+          "ScreenType": {
+            "type": "string",
+            "enum": ["Overview", "Detail", "Alarm", "Trend", "Recipe", "Diagnostic", "Navigation"]
+          },
+          "AccessLevel": { "type": "string", "enum": ["Operator", "Supervisor", "Engineer"] },
+          "Title_EN": { "type": "string", "minLength": 1 },
+          "Title_TR": { "type": "string" },
+          "Title_DE": { "type": "string" },
+          "NavigateTo": { "type": "string" },
+          "LinkedAlarm": { "type": "string" },
+          "Notes": { "type": "string" },
+          "Status": { "type": "string", "enum": ["Active", "Inactive", "Spare"] }
+        },
+        "additionalProperties": true
+      }
+    },
+    "TagList": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["HMI_TagID", "PLC_Tag", "ScreenRef", "ElementType", "Label_EN", "ReadWrite"],
+        "properties": {
+          "HMI_TagID": { "type": "string", "pattern": "^HMI_[A-Z0-9_]+$" },
+          "PLC_Tag": { "type": "string", "minLength": 1 },
+          "ScreenRef": { "type": "string", "pattern": "^SCR\\d{3}$" },
+          "ElementType": {
+            "type": "string",
+            "enum": ["Button", "Indicator", "NumericDisplay", "NumericInput", "Trend", "AlarmWidget", "Text", "Image"]
+          },
+          "Label_EN": { "type": "string", "minLength": 1 },
+          "Label_TR": { "type": "string" },
+          "Label_DE": { "type": "string" },
+          "ReadWrite": { "type": "string", "enum": ["Read", "Write", "ReadWrite"] },
+          "MinValue": { "type": ["number", "string"] },
+          "MaxValue": { "type": ["number", "string"] },
+          "EngUnit": { "type": "string" },
+          "Notes": { "type": "string" }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "ElementType": { "const": "NumericInput" } } },
+            "then": {
+              "required": ["MinValue", "MaxValue"]
+            }
+          }
+        ],
+        "additionalProperties": true
+      }
+    }
+  }
+}

@@ -1,0 +1,210 @@
+{
+  "_schema_version": "1.0.0",
+  "contract_version": "1.0.0",
+
+  "meta": {
+    "source": "factory",
+    "license": "MIT",
+    "safety_class": "STANDARD",
+    "target_platform": "TIA Portal V18+",
+    "compatible_tia": ["V18", "V19"]
+  },
+
+  "block": {
+    "name": "FB_MOTOR_DOL",
+    "version": "1.0.0",
+    "type": "FB",
+    "domain": "motor",
+    "device_type": "DOL",
+    "platform": "S7_1500_TIA_V18+",
+    "source": "Factory",
+    "lifecycle": "DRAFT",
+    "description": "Direct-On-Line motor control FB. Single contactor, run feedback, overload, welded-contactor detection, optional reversing."
+  },
+
+  "interface": {
+    "inputs": [
+      { "name": "in_bEnable",          "iec_type": "Bool", "default": false, "required": true,  "description": "FB enable (FALSE stops output immediately)" },
+      { "name": "in_bReset",           "iec_type": "Bool", "default": false, "required": true,  "description": "Fault reset — rising edge only" },
+      { "name": "in_bManualMode",      "iec_type": "Bool", "default": false, "required": true,  "description": "TRUE = manual (HMI direct control)" },
+      { "name": "in_bStartCmd",        "iec_type": "Bool", "default": false, "required": true,  "description": "Auto start command" },
+      { "name": "in_bStopCmd",         "iec_type": "Bool", "default": false, "required": true,  "description": "Auto stop command" },
+      { "name": "in_bManualStart",     "iec_type": "Bool", "default": false, "required": true,  "description": "Manual start (active only when in_bManualMode=TRUE)" },
+      { "name": "in_bManualStop",      "iec_type": "Bool", "default": false, "required": true,  "description": "Manual stop (active only when in_bManualMode=TRUE)" },
+      { "name": "in_bFeedbackRun",     "iec_type": "Bool", "default": false, "required": true,  "description": "Run feedback from contactor auxiliary contact" },
+      { "name": "in_bFeedbackOverload","iec_type": "Bool", "default": false, "required": true,  "description": "Overload / thermal relay (TRUE = fault)" },
+      { "name": "in_tStartTimeout",    "iec_type": "Time", "default": "T#2S", "required": true,  "description": "Max time to wait for run feedback after start cmd" },
+      { "name": "in_tStopTimeout",     "iec_type": "Time", "default": "T#2S", "required": true,  "description": "Max time feedback should remain after stop cmd (welded contactor)" },
+      { "name": "in_bStartCmdRev",     "iec_type": "Bool", "default": false, "required": false, "description": "Reverse start command (optional reversing)" },
+      { "name": "in_bManualStartRev",  "iec_type": "Bool", "default": false, "required": false, "description": "Manual reverse start (optional reversing)" },
+      { "name": "in_bFeedbackRunRev",  "iec_type": "Bool", "default": false, "required": false, "description": "Reverse run feedback (optional reversing)" },
+      { "name": "in_tDirectionChangeDelay", "iec_type": "Time", "default": "T#500MS", "required": false, "description": "Anti-rock delay between FWD<->REV (optional reversing)" }
+    ],
+    "outputs": [
+      { "name": "out_bMotorRun",    "iec_type": "Bool", "default": false, "required": true,  "description": "Forward run output to contactor coil" },
+      { "name": "out_bMotorRunRev", "iec_type": "Bool", "default": false, "required": false, "description": "Reverse run output (optional reversing)" },
+      { "name": "out_bReady",       "iec_type": "Bool", "default": false, "required": true,  "description": "FB ready (no fault, enabled)" },
+      { "name": "out_bError",       "iec_type": "Bool", "default": false, "required": true,  "description": "Fault active" },
+      { "name": "out_wErrorCode",   "iec_type": "Word", "default": "16#0000", "required": true,  "description": "Active fault code (see error_codes)" },
+      { "name": "out_nState",       "iec_type": "Int",  "default": 0,    "required": true,  "description": "Current state machine step number" },
+      { "name": "out_dRunHours",    "iec_type": "DInt", "default": 0,    "required": true,  "description": "Total operating seconds (rename to out_dRunSeconds for clarity)" }
+    ],
+    "in_out": [],
+    "static_vars": [
+      { "name": "s_bResetEdgeMem", "iec_type": "Bool", "note": "Rising-edge memory for reset detection" },
+      { "name": "s_bResetTrig",    "iec_type": "Bool", "note": "Rising-edge trigger (one-shot reset)" },
+      { "name": "s_nStep",         "iec_type": "Int",  "note": "State machine current step" },
+      { "name": "s_nStepLast",     "iec_type": "Int",  "note": "State machine previous step" },
+      { "name": "s_tonStartTO",    "iec_type": "TON",  "note": "Start feedback watchdog timer" },
+      { "name": "s_tonStopTO",     "iec_type": "TON",  "note": "Stop feedback watchdog (welded-contactor)" }
+    ]
+  },
+
+  "constraints": {
+    "mandatory_regions": [
+      "01_INPUT_VALIDATION",
+      "02_STATE_MACHINE",
+      "03_OUTPUT_LOGIC",
+      "04_DIAGNOSTICS"
+    ],
+    "mandatory_behaviors": [
+      {
+        "id": "B-DOL-001",
+        "description": "Reset must be rising-edge triggered (not level-triggered)",
+        "check_pattern": "s_bResetTrig\\s*:=\\s*.*in_bReset.*AND\\s*NOT.*s_bResetEdgeMem",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-DOL-002",
+        "description": "Start feedback watchdog timer must be present (s_tonStartTO)",
+        "check_pattern": "s_tonStartTO",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-DOL-003",
+        "description": "Stop feedback watchdog (welded-contactor detection) must be present (s_tonStopTO)",
+        "check_pattern": "s_tonStopTO",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-DOL-004",
+        "description": "Overload input must be checked within the state machine (not only at init)",
+        "check_pattern": "in_bFeedbackOverload",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-DOL-005",
+        "description": "Error code 16#0001 (no start feedback) must be set on timeout",
+        "check_pattern": "16#0001",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-DOL-006",
+        "description": "Error code 16#0002 (welded contactor) must be present",
+        "check_pattern": "16#0002",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-DOL-007",
+        "description": "Error code 16#0003 (overload) must be present",
+        "check_pattern": "16#0003",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-DOL-008",
+        "description": "Optimized Access must be declared",
+        "check_pattern": "S7_Optimized_Access\\s*:=\\s*'TRUE'",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-DOL-009",
+        "description": "FB name must be FB_MOTOR_DOL, FB_MOTOR_DOL_REV, or FB_Motor_Standard",
+        "check_pattern": "FUNCTION_BLOCK\\s+\"?(FB_MOTOR_DOL(_REV)?|FB_Motor_Standard)\"?",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-DOL-010",
+        "description": "Run-hours counter should be present",
+        "check_pattern": "s_dRunHours|out_dRunHours|dRunHours",
+        "severity": "SHOULD"
+      }
+    ],
+    "forbidden_patterns": [
+      "CURRENT_TIME\\(\\)",
+      "GET_SYSTIME\\(\\)",
+      "RUNTIME\\s*\\("
+    ],
+    "error_codes": [
+      { "hex": "16#0001", "meaning": "Start command but no run feedback within in_tStartTimeout" },
+      { "hex": "16#0002", "meaning": "Stop command but run feedback still active after in_tStopTimeout (welded contactor)" },
+      { "hex": "16#0003", "meaning": "Overload / motor protection triggered (in_bFeedbackOverload=TRUE)" },
+      { "hex": "16#0004", "meaning": "Manual/Auto mode conflict" },
+      { "hex": "16#0005", "meaning": "Emergency stop active", "applies_to": ["with_safety_input"] },
+      { "hex": "16#0006", "meaning": "Feedback signal anomaly (chatter)" },
+      { "hex": "16#0010", "meaning": "FWD and REV requested simultaneously (reversing only)", "applies_to": ["DOL_REV"] },
+      { "hex": "16#0011", "meaning": "Direction change without anti-rock delay (reversing only)", "applies_to": ["DOL_REV"] }
+    ]
+  },
+
+  "behaviors": [
+    {
+      "id": "FB_RUN_TIMEOUT",
+      "given": "in_bStartCmd=TRUE, in_bEnable=TRUE, in_bFeedbackRun=FALSE",
+      "when": "in_bFeedbackRun remains FALSE for duration >= in_tStartTimeout",
+      "then": "out_bError=TRUE AND out_wErrorCode=16#0001 AND out_bMotorRun=FALSE"
+    },
+    {
+      "id": "WELDED_CONTACTOR",
+      "given": "motor running (out_bMotorRun=TRUE, in_bFeedbackRun=TRUE)",
+      "when": "in_bStopCmd=TRUE but in_bFeedbackRun still TRUE after in_tStopTimeout",
+      "then": "out_bError=TRUE AND out_wErrorCode=16#0002 AND out_bMotorRun=FALSE"
+    },
+    {
+      "id": "OVERLOAD_BLOCKS_START",
+      "given": "in_bFeedbackOverload=TRUE",
+      "when": "in_bStartCmd=TRUE",
+      "then": "out_bMotorRun=FALSE AND out_bError=TRUE AND out_wErrorCode=16#0003"
+    },
+    {
+      "id": "SAFE_STATE_ON_RESET_EDGE",
+      "given": "out_bError=TRUE (any fault code)",
+      "when": "in_bReset rising edge detected (not level-held)",
+      "then": "out_bError=FALSE AND out_wErrorCode=16#0000 (cleared on edge only, not while reset held)"
+    },
+    {
+      "id": "ENABLE_GATE",
+      "given": "in_bEnable=FALSE",
+      "when": "any condition",
+      "then": "out_bMotorRun=FALSE immediately, no start possible"
+    }
+  ],
+
+  "acceptance": {
+    "contract_check": true,
+    "compile_check":  true,
+    "sim_test":       true,
+    "human_signoff":  true
+  },
+
+  "gate": {
+    "checks": [
+      { "id": "G-01", "type": "structural",             "description": "scl_validator: FUNCTION_BLOCK/END_FUNCTION_BLOCK balance, VAR/END_VAR, IF/END_IF, parentheses", "required": true },
+      { "id": "G-02", "type": "contract_interface",     "description": "All required inputs/outputs declared with correct IEC types", "required": true },
+      { "id": "G-03", "type": "contract_behavior",      "description": "All MUST behaviors present (regex search in SCL body)", "required": true },
+      { "id": "G-04", "type": "contract_error_codes",   "description": "All required error codes referenced in SCL", "required": true },
+      { "id": "G-05", "type": "forbidden_pattern",      "description": "No Siemens-proprietary runtime calls (CURRENT_TIME, GET_SYSTIME, RUNTIME) in a generic Factory block", "required": true },
+      { "id": "G-06", "type": "plcrex",                 "description": "PLCreX IEC 61131-3 structural parse (optional — skip gracefully if tool absent)", "required": false }
+    ]
+  },
+
+  "prompt_binding": {
+    "file": "04_AI_PROMPTS/code_gen/motor/PROMPT_MOTOR_DOL.md",
+    "version": "1.1.0",
+    "last_synced": "2026-05-30"
+  },
+
+  "duplicate_detection": {
+    "alternatives": ["FB_Motor_SoftStarter", "FB_Motor_StarDelta"],
+    "note": "Use FB_MOTOR_DOL only for motors < 7.5 kW starting directly across-the-line. For larger motors or soft-start requirements, use the appropriate alternative."
+  }
+}

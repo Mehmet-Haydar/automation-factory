@@ -1,0 +1,91 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.Python
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+.cursor/cache/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# GUI settings (may contain API keys)
+.gui_settings.json
+.workbench_settings.json
+.claude/*
+!.claude/settings.json
+
+# Test outputs
+/customer_projects/
+**/_output/
+# Exception: the synthetic demo ships its Gate-5 example SCL output as
+# teaching material (the rest of **/_output/ stays ignored).
+!examples/Kunde_Mueller_Conveyor_Retrofit/_output/
+!examples/Kunde_Mueller_Conveyor_Retrofit/_output/**
+
+# Log
+*.log
+*.tmp
+*.bak
+
+# Runtime AI decision audit log — hash-chained per-run artifact written by the
+# audit logger (lands at repo root via the FACTORY_ROOT fallback when no project
+# is open). Machine-specific runtime data, not source.
+/AI_DECISION_LOG.jsonl
+
+# Archive (old versions + rejected proposals — developer reference, not for public)
+_archive/
+
+# Developer-only content — internal audit logs, agent-team docs, progress
+# reports. Excluded from the public release. (Comment the line below out to
+# include them in a private export.)
+_dev/
+
+# Internal sprint/fix plans (dated, working notes — kept locally in _dev/)
+PLAN_GECE_*.md
+DUZELTME_PLANI_*.md
+
+# Internal build/resume state (agent-team checkpoint) — not for public consumers.
+.factory_build_state.json
+
+# S5D import: LGPL toolbox DLLs are fetched from NuGet by
+# 05_SCRIPTS/fetch_s5d_toolbox.ps1 — never committed.
+05_SCRIPTS/_s5d_toolbox/
+
+# Claude Code session transcripts (collected locally, not for commit)
+buraya_bak/
+
+# Design mockups (large HTML exports from Claude Design — kept locally as
+# reference, too big to bloat the repo)
+Neue_gui/
+
+# transient test artifacts (junit dumps at repo root)
+/_t*.xml
+
+# personal dev tooling (local only — not part of the product)
+.claude/
+.cursor/
+.cursorrules
+CLAUDE.md
+
+# Internal audit workspace (dev tooling, not part of the public tree)
+denetim/
+
+# RAG index (built locally by ingest.py — not committed)
+# Use _rag_index/* (not _rag_index/) so the ! negation below can unignore bm25.json
+_rag_index/*
+# BM25 keyword index is committed so the repo works offline out of the box
+!_rag_index/bm25.json

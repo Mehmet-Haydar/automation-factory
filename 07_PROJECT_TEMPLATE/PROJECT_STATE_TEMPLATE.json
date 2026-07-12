@@ -1,0 +1,7 @@
+{
+  "_comment": "STUB — to be filled in per the sprint plan",
+  "_title": "Project State Template",
+  "_version": "0.1.0",
+  "_status": "STUB",
+  "_prerequisites": ["GLOBAL_PROJECT_STATE_SCHEMA.json"]
+}

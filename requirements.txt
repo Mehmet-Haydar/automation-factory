@@ -1,0 +1,68 @@
+# AUTOMATION_FACTORY Python dependencies
+# Python 3.10+ required
+#
+# I-A6: every dependency now carries an UPPER major-version bound. Without
+# them an `>=` floor lets a future major release (pywebview 7.x, openai 3.x,
+# pyyaml 7.x …) silently overwrite a working install on the next pip run and
+# break the desktop app or quietly change call semantics. The cap is set to
+# the next major above the version we actually tested with.
+#
+# For fully reproducible installs (release/CI), generate a lock file:
+#   pip install pip-tools
+#   pip-compile --generate-hashes -o requirements.lock requirements.txt
+# and install with `pip install -r requirements.lock`.
+
+# Markdown / YAML parsing (for all scripts)
+pyyaml>=6.0,<7.0
+
+# Excel conversion (script_md_to_xlsx, script_excel_to_metadata)
+openpyxl>=3.1.0,<4.0
+pandas>=2.0.0,<4.0      # optional but recommended, CSV/XLSX operations
+
+# JSON Schema validation (script_consistency_check)
+jsonschema>=4.17.0,<5.0
+
+# CLI / rich output
+rich>=13.0.0,<17.0      # CLI table + colored output (optional but recommended)
+click>=8.4.2,<10.0      # CLI arguments (optional; argparse is enough)
+
+# GUI — web face (factory_web.py): native desktop window + HTML/CSS GUI
+pywebview>=5.0,<7.0     # Desktop window hosting the webgui/ front-end
+# AI Multi-Provider (for the factory_web.py API mode)
+anthropic>=0.39.0,<1.0  # Claude (Opus, Sonnet, Haiku)
+openai>=1.50.0,<3.0     # GPT-4, GPT-4o, o1 + DeepSeek (OpenAI-compatible API)
+google-genai>=1.0,<3.0            # Google Gemini (new SDK — Gemini 3.5/2.5)
+google-generativeai>=0.8.0,<1.0  # Google Gemini legacy fallback (kept for compat)
+
+# Git integration (script_project_init --git)
+gitpython>=3.1.0,<4.0   # optional; the subprocess git command also works
+
+# OS keystore integration (API key storage)
+keyring>=24.0.0,<27.0   # stores API keys in OS credential manager (optional but recommended)
+
+# Test framework (for v3.0.0-beta)
+pytest>=7.4.0,<10.0
+pytest-cov>=7.1.0,<8.0
+
+# Linting (for development)
+ruff>=0.1.0,<1.0
+mypy>=1.5.0,<3.0
+
+# PDF output (customer_report, FAT/SAT protocols, CE assessment — pdf_common.py)
+reportlab>=5.0.0,<6.0      # optional; without it generators fall back to Markdown
+
+# PDF reading (for legacy schematic documents — future feature)
+pdfplumber>=0.10.0,<1.0  # optional
+pytesseract>=0.3.13,<1.0 # OCR (for scanned documents) — requires system tesseract
+
+# Mermaid diagram validation (for RD03)
+# Not mandatory — only for Mermaid syntax preview
+# mermaid-cli is node-based, no Python wrapper; use subprocess if needed
+
+# XML parsing (Openness, L5X, PLCopen XML)
+lxml>=6.1.1,<7.0
+
+# TIA Portal Openness direct path (Send to TIA / compile preflight)
+# Windows-only; needed ONLY for the direct bridge — the folder-export
+# (copy-paste) path works without it. Bridges lazy-import with a clear hint.
+pythonnet>=3.0,<4.0; sys_platform == 'win32'

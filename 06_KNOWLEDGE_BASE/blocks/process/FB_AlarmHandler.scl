@@ -1,0 +1,160 @@
+// ============================================================================
+// FB_AlarmHandler — Single Alarm Channel Handler
+// Source    : Factory Library
+// Contract  : 06_KNOWLEDGE_BASE/contracts/process/FB_AlarmHandler.contract.json
+// Lifecycle : AUTO_VERIFIED_structural | PENDING_TIA_VERIFY
+// ============================================================================
+// ============================================================
+// *** SAFETY NOTICE ***
+// This function block is NOT designed or validated for use in
+// Safety Instrumented Systems (SIS) per IEC 61508 / IEC 62061,
+// or as a safety-related control function per ISO 13849 (PLr).
+// For functional safety applications, use only certified safety
+// hardware or F-CPU safety functions. A qualified safety engineer
+// must review all applications involving process or personnel safety.
+// ============================================================
+
+FUNCTION_BLOCK "FB_AlarmHandler"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 1.0
+
+   VAR_INPUT
+      in_bEnable       : Bool := FALSE;
+      in_bReset        : Bool := FALSE;
+      in_bAlarmTrigger : Bool := FALSE;
+      in_bAcknowledge  : Bool := FALSE;
+      in_nPriority     : Int  := 1;
+      in_bLatching     : Bool := TRUE;
+      in_tDeglitch     : Time := T#100MS;
+   END_VAR
+
+   VAR_OUTPUT
+      out_bAlarmActive  : Bool := FALSE;
+      out_bAlarmAcked   : Bool := FALSE;
+      out_bAlarmLatched : Bool := FALSE;
+      out_bNewAlarm     : Bool := FALSE;
+      out_dAlarmCount   : DInt := 0;
+      out_bReady        : Bool := FALSE;
+      out_bError        : Bool := FALSE;
+      out_wErrorCode    : Word := 16#0000;
+      out_nState        : Int  := 0;
+   END_VAR
+
+   VAR
+      s_bResetEdgeMem   : Bool := FALSE;
+      s_bResetTrig      : Bool := FALSE;
+      s_bTriggerEdgeMem : Bool := FALSE;
+      s_bAckEdgeMem     : Bool := FALSE;
+      s_bAckTrig        : Bool := FALSE;
+      s_nStep           : Int  := 0;
+      s_nStepLast       : Int  := 0;
+      s_tonDeglitch     : TON;
+      s_nErrorCount     : DInt := 0;
+   END_VAR
+
+   VAR_TEMP
+      t_bTriggerRising : Bool;
+   END_VAR
+
+
+BEGIN
+
+   REGION 01_INPUT_VALIDATION
+      s_bResetTrig    := in_bReset AND NOT s_bResetEdgeMem;
+      s_bResetEdgeMem := in_bReset;
+
+      t_bTriggerRising := in_bAlarmTrigger AND NOT s_bTriggerEdgeMem;
+      s_bTriggerEdgeMem := in_bAlarmTrigger;
+
+      s_bAckTrig    := in_bAcknowledge AND NOT s_bAckEdgeMem;
+      s_bAckEdgeMem := in_bAcknowledge;
+
+      IF s_bResetTrig THEN
+         IF in_bLatching THEN
+            out_bAlarmLatched := FALSE;
+         END_IF;
+         out_bError := FALSE; out_wErrorCode := 16#0000;
+         IF s_nStep = 99 THEN s_nStep := 0; END_IF;
+      END_IF;
+
+      IF NOT in_bEnable THEN
+         out_bAlarmActive := FALSE; out_bNewAlarm := FALSE;
+         out_bReady := FALSE; s_nStep := 0; RETURN;
+      END_IF;
+
+      // Validate priority
+      IF in_nPriority < 1 OR in_nPriority > 4 THEN
+         IF NOT out_bError THEN
+            out_bError := TRUE; out_wErrorCode := 16#0001;   // 16#0001 = Invalid priority
+            s_nErrorCount := s_nErrorCount + 1;
+         END_IF;
+         s_nStep := 99;
+      END_IF;
+   END_REGION
+
+
+   REGION 02_STATE_MACHINE
+      CASE s_nStep OF
+
+         0:  // NORMAL — no alarm
+            out_bReady := TRUE; out_bAlarmActive := FALSE;
+            out_bNewAlarm := FALSE; out_bAlarmAcked := FALSE;
+            s_tonDeglitch(IN := FALSE, PT := in_tDeglitch);
+
+            IF in_bAlarmTrigger THEN
+               s_tonDeglitch(IN := TRUE, PT := in_tDeglitch);
+               IF s_tonDeglitch.Q THEN
+                  s_nStep := 10;
+               END_IF;
+            END_IF;
+
+         10: // ALARM ACTIVE (latching or not)
+            out_bAlarmActive  := TRUE;
+            out_bAlarmLatched := in_bLatching;
+            out_bNewAlarm     := t_bTriggerRising;   // one-shot on new alarm
+
+            IF t_bTriggerRising THEN
+               out_dAlarmCount := out_dAlarmCount + 1;
+            END_IF;
+
+            // Acknowledge handling
+            IF s_bAckTrig THEN
+               out_bAlarmAcked := TRUE;
+            END_IF;
+
+            // Auto-clear (non-latching) when trigger drops
+            IF NOT in_bAlarmTrigger AND NOT in_bLatching THEN
+               out_bAlarmActive := FALSE; out_bAlarmAcked := FALSE;
+               s_nStep := 0;
+            END_IF;
+
+            // Latching: require reset + ack + trigger gone
+            IF in_bLatching AND s_bResetTrig AND out_bAlarmAcked AND NOT in_bAlarmTrigger THEN
+               out_bAlarmActive  := FALSE;
+               out_bAlarmLatched := FALSE;
+               out_bAlarmAcked   := FALSE;
+               s_nStep := 0;
+            END_IF;
+
+         99: // FAULT (invalid priority etc.)
+            out_bAlarmActive := FALSE; out_bReady := FALSE;
+
+      ELSE
+         out_wErrorCode := 16#FFFF; out_bError := TRUE; s_nStep := 99;
+      END_CASE;
+
+      IF s_nStep <> s_nStepLast THEN s_nStepLast := s_nStep; END_IF;
+   END_REGION
+
+
+   REGION 03_OUTPUT_LOGIC
+      out_nState := s_nStep;
+   END_REGION
+
+
+   REGION 04_DIAGNOSTICS
+      // out_dAlarmCount: total alarm events since reset
+   END_REGION
+
+
+END_FUNCTION_BLOCK

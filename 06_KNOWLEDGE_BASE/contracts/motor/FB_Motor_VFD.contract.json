@@ -1,0 +1,352 @@
+{
+  "_schema_version": "1.0.0",
+  "contract_version": "1.0.0",
+  "block": {
+    "name": "FB_MOTOR_VFD",
+    "version": "1.0.0",
+    "type": "FB",
+    "domain": "motor",
+    "device_type": "VFD",
+    "platform": "S7_1500_TIA_V18+",
+    "source": "Factory",
+    "lifecycle": "DRAFT",
+    "description": "Generic VFD (Variable Frequency Drive) control FB. Hardware-independent; brand-specific STW/ZSW word mapping done by a thin brand-driver FB."
+  },
+  "interface": {
+    "inputs": [
+      {
+        "name": "in_bEnable",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bReset",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bManualMode",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bStartCmd",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bStopCmd",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_rSetpointHz",
+        "iec_type": "Real",
+        "default": 0.0,
+        "required": true
+      },
+      {
+        "name": "in_rMinFreq",
+        "iec_type": "Real",
+        "default": 0.0,
+        "required": true
+      },
+      {
+        "name": "in_rMaxFreq",
+        "iec_type": "Real",
+        "default": 50.0,
+        "required": true
+      },
+      {
+        "name": "in_rDeviationTolerance",
+        "iec_type": "Real",
+        "default": 2.0,
+        "required": true
+      },
+      {
+        "name": "in_tDeviationTimeout",
+        "iec_type": "Time",
+        "default": "T#5S",
+        "required": true
+      },
+      {
+        "name": "in_bFeedbackRun",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bFeedbackReady",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bFeedbackFault",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_rFeedbackHz",
+        "iec_type": "Real",
+        "default": 0.0,
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "name": "out_bStartCmd",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bResetCmd",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_rSetpointAO",
+        "iec_type": "Real",
+        "default": 0.0,
+        "required": true
+      },
+      {
+        "name": "out_bReady",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bError",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_wErrorCode",
+        "iec_type": "Word",
+        "default": "16#0000",
+        "required": true
+      },
+      {
+        "name": "out_nState",
+        "iec_type": "Int",
+        "default": 0,
+        "required": true
+      },
+      {
+        "name": "out_bAtSpeed",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_rActualHz",
+        "iec_type": "Real",
+        "default": 0.0,
+        "required": true
+      },
+      {
+        "name": "out_dRunHours",
+        "iec_type": "DInt",
+        "default": 0,
+        "required": true
+      }
+    ],
+    "in_out": [],
+    "static_vars": [
+      {
+        "name": "s_bResetEdgeMem",
+        "iec_type": "Bool"
+      },
+      {
+        "name": "s_bResetTrig",
+        "iec_type": "Bool"
+      },
+      {
+        "name": "s_nStep",
+        "iec_type": "Int"
+      },
+      {
+        "name": "s_tonStartTO",
+        "iec_type": "TON"
+      },
+      {
+        "name": "s_tonDeviation",
+        "iec_type": "TON"
+      }
+    ]
+  },
+  "constraints": {
+    "mandatory_regions": [
+      "01_INPUT_VALIDATION",
+      "02_STATE_MACHINE",
+      "03_OUTPUT_LOGIC",
+      "04_DIAGNOSTICS"
+    ],
+    "mandatory_behaviors": [
+      {
+        "id": "B-VFD-001",
+        "description": "Reset rising edge",
+        "check_pattern": "s_bResetTrig\\s*:=\\s*.*in_bReset.*AND\\s*NOT.*s_bResetEdgeMem",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-VFD-002",
+        "description": "Start timeout timer present",
+        "check_pattern": "s_tonStartTO",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-VFD-003",
+        "description": "Speed deviation watchdog present",
+        "check_pattern": "s_tonDeviation",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-VFD-004",
+        "description": "Setpoint range validation (min/max)",
+        "check_pattern": "in_rMinFreq|in_rMaxFreq",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-VFD-005",
+        "description": "Drive fault signal detected",
+        "check_pattern": "in_bFeedbackFault",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-VFD-006",
+        "description": "Error code 16#0001 present",
+        "check_pattern": "16#0001",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-VFD-007",
+        "description": "Error code 16#0006 (drive fault) present",
+        "check_pattern": "16#0006",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-VFD-008",
+        "description": "Error code 16#0010 (setpoint range) present",
+        "check_pattern": "16#0010",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-VFD-009",
+        "description": "Error code 16#0011 (speed deviation) present",
+        "check_pattern": "16#0011",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-VFD-010",
+        "description": "FB name is FB_MOTOR_VFD",
+        "check_pattern": "FUNCTION_BLOCK\\s+\"?FB_MOTOR_VFD\"?",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-VFD-011",
+        "description": "Optimized Access declared",
+        "check_pattern": "S7_Optimized_Access\\s*:=\\s*'TRUE'",
+        "severity": "MUST"
+      }
+    ],
+    "forbidden_patterns": [
+      "CURRENT_TIME\\(\\)",
+      "GET_SYSTIME\\(\\)"
+    ],
+    "error_codes": [
+      {
+        "hex": "16#0001",
+        "meaning": "Start but no Ready feedback from drive"
+      },
+      {
+        "hex": "16#0006",
+        "meaning": "Drive Fault signal active"
+      },
+      {
+        "hex": "16#0010",
+        "meaning": "Setpoint out of range (below min or above max)"
+      },
+      {
+        "hex": "16#0011",
+        "meaning": "Speed deviation exceeds tolerance"
+      }
+    ]
+  },
+  "gate": {
+    "checks": [
+      {
+        "id": "G-01",
+        "type": "structural",
+        "description": "Structural balance",
+        "required": true
+      },
+      {
+        "id": "G-02",
+        "type": "contract_interface",
+        "description": "Required ports",
+        "required": true
+      },
+      {
+        "id": "G-03",
+        "type": "contract_behavior",
+        "description": "MUST behaviors",
+        "required": true
+      },
+      {
+        "id": "G-04",
+        "type": "contract_error_codes",
+        "description": "Error codes in SCL",
+        "required": true
+      },
+      {
+        "id": "G-05",
+        "type": "forbidden_pattern",
+        "description": "No proprietary calls",
+        "required": true
+      },
+      {
+        "id": "G-06",
+        "type": "plcrex",
+        "description": "PLCreX optional",
+        "required": false
+      }
+    ]
+  },
+  "prompt_binding": {
+    "file": "04_AI_PROMPTS/code_gen/motor/PROMPT_MOTOR_VFD.md",
+    "version": "1.0.0",
+    "last_synced": "2026-05-30"
+  },
+  "duplicate_detection": {
+    "alternatives": [],
+    "note": "Hardware-independent. Brand-specific STW/ZSW mapping belongs in a thin brand-driver FB layered on top."
+  },
+  "meta": {
+    "source": "factory",
+    "license": "MIT",
+    "safety_class": "STANDARD",
+    "target_platform": "TIA Portal V18+",
+    "compatible_tia": [
+      "V18",
+      "V19"
+    ]
+  },
+  "behaviors": [],
+  "acceptance": {
+    "contract_check": true,
+    "compile_check": true,
+    "sim_test": true,
+    "human_signoff": true
+  }
+}

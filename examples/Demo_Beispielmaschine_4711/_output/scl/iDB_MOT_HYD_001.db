@@ -1,0 +1,7 @@
+DATA_BLOCK "iDB_MOT_HYD_001"
+{ S7_Optimized_Access := 'TRUE' }
+"FB_Motor_StarDelta"
+
+BEGIN
+
+END_DATA_BLOCK

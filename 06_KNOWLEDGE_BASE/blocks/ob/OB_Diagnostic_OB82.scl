@@ -1,0 +1,69 @@
+// ============================================================================
+// OB_DIAGNOSTIC_OB82 — Module Diagnostic Organization Block
+// Source    : Factory Library
+// Contract  : 06_KNOWLEDGE_BASE/contracts/ob/OB_Diagnostic_OB82.contract.json
+// Lifecycle : AUTO_VERIFIED_structural | PENDING_TIA_VERIFY
+// STATUS    : STUB_ONLY — project engineer must fill <PROJECT_*> placeholders.
+//             Start-info variables (OB82_MDL_ADDR, OB82_EV_CLASS, OB82_FLT_REG)
+//             are provided by TIA Portal as local OB variables — declare in VAR_TEMP.
+// ============================================================================
+// ============================================================
+// *** SAFETY NOTICE ***
+// This function block is NOT designed or validated for use in
+// Safety Instrumented Systems (SIS) per IEC 61508 / IEC 62061,
+// or as a safety-related control function per ISO 13849 (PLr).
+// For functional safety applications, use only certified safety
+// hardware or F-CPU safety functions. A qualified safety engineer
+// must review all applications involving process or personnel safety.
+// ============================================================
+
+ORGANIZATION_BLOCK "OB_DIAGNOSTIC_OB82"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 1.0
+
+   VAR_TEMP
+      tmp_wDiagData : Word;   // Diagnostic data placeholder
+   END_VAR
+
+
+BEGIN
+
+   //===========================================================================
+   // REGION: 01_READ_DIAG
+   // Purpose: Read diagnostic data from the event
+   //===========================================================================
+   REGION 01_READ_DIAG
+      // <PROJECT_READ_DIAG> — start-info skeleton (project-adapt VAR_TEMP names)
+      // TIA Portal exposes these as OB local variables in VAR_TEMP:
+      //   OB82_MDL_ADDR  : Word;    // Module I/O address with fault
+      //   OB82_EV_CLASS  : Byte;    // Event class (16#38 = going, 16#39 = coming)
+      //   OB82_FLT_REG   : Byte;    // Module fault register
+      //   OB82_MDL_DEFECT: Bool;    // TRUE when module defective
+      // Example read (adapt tag/DB names):
+      //   tmp_wDiagData := OB82_MDL_ADDR;
+      //   IF OB82_MDL_DEFECT THEN ... END_IF;
+   END_REGION
+
+
+   //===========================================================================
+   // REGION: 02_SET_ALARM
+   // Purpose: Set the appropriate alarm flag based on diagnostic event
+   //===========================================================================
+   REGION 02_SET_ALARM
+      // <PROJECT_SET_ALARM>
+      // Set alarm flag in DB_Diagnostics based on failing module address
+      // Example: "DB_Diagnostics".bModuleFault := TRUE;
+   END_REGION
+
+
+   //===========================================================================
+   // REGION: 03_LOG_EVENT
+   // Purpose: Log the diagnostic event to the system event buffer
+   //===========================================================================
+   REGION 03_LOG_EVENT
+      // <PROJECT_LOG_EVENT>
+      // Increment diagnostic event counter, store timestamp
+   END_REGION
+
+
+END_ORGANIZATION_BLOCK

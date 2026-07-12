@@ -1,0 +1,148 @@
+// ============================================================================
+// FB_PID_WRAPPER — PID Loop Wrapper
+// Source    : Factory Library
+// Contract  : 06_KNOWLEDGE_BASE/contracts/process/FB_PID_Wrapper.contract.json
+// Lifecycle : AUTO_VERIFIED_structural | PENDING_TIA_VERIFY
+// *** STUB WARNING ***
+// The CONTROLLING state currently passes in_rSetpoint directly to the output
+// (pass-through placeholder). This FB provides NO closed-loop PID control until
+// a real PID_Compact instance is inserted at the <PROJECT_PID_CALL> marker.
+// DO NOT connect this FB to a real control loop without completing that step.
+// ============================================================================
+// ============================================================
+// *** SAFETY NOTICE ***
+// This function block is NOT designed or validated for use in
+// Safety Instrumented Systems (SIS) per IEC 61508 / IEC 62061,
+// or as a safety-related control function per ISO 13849 (PLr).
+// For functional safety applications, use only certified safety
+// hardware or F-CPU safety functions. A qualified safety engineer
+// must review all applications involving process or personnel safety.
+// ============================================================
+
+FUNCTION_BLOCK "FB_PID_WRAPPER"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 1.0
+
+   VAR_INPUT
+      in_bEnable       : Bool := FALSE;
+      in_bReset        : Bool := FALSE;
+      in_bManualMode   : Bool := FALSE;
+      in_rSetpoint     : Real := 0.0;
+      in_rProcessValue : Real := 0.0;
+      in_rManualOutput : Real := 0.0;
+      in_rOutputMin    : Real := 0.0;
+      in_rOutputMax    : Real := 100.0;
+   END_VAR
+
+   VAR_OUTPUT
+      out_rOutput     : Real := 0.0;
+      out_rError      : Real := 0.0;
+      out_bAtSetpoint : Bool := FALSE;
+      out_bReady      : Bool := FALSE;
+      out_bError      : Bool := FALSE;
+      out_wErrorCode  : Word := 16#0000;
+      out_nState      : Int  := 0;
+      out_bSaturated  : Bool := FALSE;   // S-3 fix: saturation indicator (replaces 16#0002 overwrite)
+   END_VAR
+
+   VAR
+      s_bResetEdgeMem : Bool := FALSE;
+      s_bResetTrig    : Bool := FALSE;
+      s_nStep         : Int  := 0;
+      s_nStepLast     : Int  := 0;
+      s_nErrorCount   : DInt := 0;
+   END_VAR
+
+   VAR_TEMP
+      t_rRawOutput    : Real;
+      t_rDeviation    : Real;
+   END_VAR
+
+
+BEGIN
+
+   REGION 01_INPUT_VALIDATION
+      s_bResetTrig    := in_bReset AND NOT s_bResetEdgeMem;
+      s_bResetEdgeMem := in_bReset;
+
+      IF s_bResetTrig THEN
+         out_bError := FALSE; out_wErrorCode := 16#0000; out_bSaturated := FALSE;
+         IF s_nStep = 99 THEN s_nStep := 0; END_IF;
+      END_IF;
+
+      IF NOT in_bEnable THEN
+         out_rOutput := in_rOutputMin; out_bReady := FALSE;
+         out_bAtSetpoint := FALSE; s_nStep := 0; RETURN;
+      END_IF;
+
+      // Process value range check
+      IF in_rProcessValue < -1000.0 OR in_rProcessValue > 100000.0 THEN
+         IF NOT out_bError THEN
+            out_bError := TRUE; out_wErrorCode := 16#0001;   // 16#0001 = PV out of range
+            s_nErrorCount := s_nErrorCount + 1;
+         END_IF;
+         s_nStep := 99;
+      END_IF;
+   END_REGION
+
+
+   REGION 02_STATE_MACHINE
+      CASE s_nStep OF
+
+         0:  // IDLE
+            out_bReady := TRUE; s_nStep := 10;
+
+         10: // CONTROLLING
+            // Manual/auto bumpless transfer
+            IF in_bManualMode THEN
+               t_rRawOutput := in_rManualOutput;
+            ELSE
+               // *** STUB: replace this block with a real PID_Compact call ***
+               // <PROJECT_PID_CALL> — insert PID_Compact call here with Setpoint/ProcessValue
+               // Until replaced, output = setpoint (open-loop pass-through — NO control action)
+               t_rDeviation := in_rSetpoint - in_rProcessValue;
+               out_rError   := t_rDeviation;
+               out_bError   := TRUE;           // Force error flag so integrators notice stub is active
+               out_wErrorCode := 16#0010;      // 16#0010 = PID not implemented (stub active)
+               t_rRawOutput := in_rSetpoint;   // pass-through placeholder — REPLACE with PID output
+            END_IF;
+
+            // Output clamp to min/max limits (in_rOutputMin, in_rOutputMax)
+            out_rOutput := t_rRawOutput;
+            IF out_rOutput < in_rOutputMin THEN out_rOutput := in_rOutputMin; END_IF;
+            IF out_rOutput > in_rOutputMax THEN out_rOutput := in_rOutputMax; END_IF;
+
+            // At-setpoint detection (within 2% of range)
+            t_rDeviation := ABS(in_rSetpoint - in_rProcessValue);
+            out_bAtSetpoint := t_rDeviation < 2.0;
+
+            // Output saturation indicator — uses dedicated out_bSaturated flag (16#0002 = saturated)
+            // S-3 fix: do NOT overwrite out_wErrorCode here; stub (16#0010) or PV-fault (16#0001)
+            // codes must not be silently replaced by the saturation indicator.
+            out_bSaturated := (out_rOutput <= in_rOutputMin + 0.01) OR (out_rOutput >= in_rOutputMax - 0.01);
+            // Note: out_bError intentionally NOT set — saturation is expected behavior
+
+            IF NOT in_bEnable THEN s_nStep := 0; END_IF;
+
+         99: // FAULT
+            out_rOutput := in_rOutputMin; out_bReady := FALSE; out_bAtSetpoint := FALSE;
+
+      ELSE
+         out_wErrorCode := 16#FFFF; out_bError := TRUE; s_nStep := 99;
+      END_CASE;
+
+      IF s_nStep <> s_nStepLast THEN s_nStepLast := s_nStep; END_IF;
+   END_REGION
+
+
+   REGION 03_OUTPUT_LOGIC
+      out_nState := s_nStep;
+   END_REGION
+
+
+   REGION 04_DIAGNOSTICS
+      // s_nErrorCount: total fault events
+   END_REGION
+
+
+END_FUNCTION_BLOCK

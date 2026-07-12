@@ -1,0 +1,199 @@
+// ============================================================================
+// FB_ModeManager — Simplified OMAC PackML-inspired Mode Manager (non-certified)
+// Source    : Factory Library
+// Contract  : 06_KNOWLEDGE_BASE/contracts/system/FB_ModeManager.contract.json
+// Lifecycle : AUTO_VERIFIED_structural | PENDING_TIA_VERIFY
+// Modes (step → out_nCurrentMode):
+//   step  0 → M01 Stopped (1)
+//   step 10 → M02 Running (2)
+//   step 20 → M05 Held (5)
+//   step 30 → M04 Suspended (4)
+//   step 40 → M03 Complete (3)
+//   step 99 → Fault (0)
+// NOTE: This is a simplified 5-state FSM inspired by OMAC PackML TR88.
+//       It is NOT a certified PackML implementation.
+// ============================================================================
+// ============================================================
+// *** SAFETY NOTICE ***
+// This function block is NOT designed or validated for use in
+// Safety Instrumented Systems (SIS) per IEC 61508 / IEC 62061,
+// or as a safety-related control function per ISO 13849 (PLr).
+// For functional safety applications, use only certified safety
+// hardware or F-CPU safety functions. A qualified safety engineer
+// must review all applications involving process or personnel safety.
+// ============================================================
+
+FUNCTION_BLOCK "FB_ModeManager"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 1.0
+
+   VAR_INPUT
+      in_bEnable      : Bool := FALSE;
+      in_bReset       : Bool := FALSE;
+      in_bCmdStop     : Bool := FALSE;
+      in_bCmdStart    : Bool := FALSE;
+      in_bCmdHold     : Bool := FALSE;
+      in_bCmdUnhold   : Bool := FALSE;
+      in_bCmdSuspend  : Bool := FALSE;
+      in_bCmdUnsuspend: Bool := FALSE;
+      in_bCmdAbort    : Bool := FALSE;
+      in_bCmdClear    : Bool := FALSE;
+      in_bCmdComplete : Bool := FALSE;
+      in_bEmergency   : Bool := FALSE;
+   END_VAR
+
+   VAR_OUTPUT
+      out_nCurrentMode   : Int  := 0;
+      out_bModeStop      : Bool := FALSE;
+      out_bModeRunning   : Bool := FALSE;
+      out_bModeHeld      : Bool := FALSE;
+      out_bModeComplete  : Bool := FALSE;
+      out_bModeEmergency : Bool := FALSE;
+      out_bReady         : Bool := FALSE;
+      out_bError         : Bool := FALSE;
+      out_wErrorCode     : Word := 16#0000;
+      out_nState         : Int  := 0;
+   END_VAR
+
+   VAR
+      s_bResetEdgeMem : Bool := FALSE;
+      s_bResetTrig    : Bool := FALSE;
+      s_nStep         : Int  := 0;
+      s_nStepLast     : Int  := 0;
+      s_nModeLast     : Int  := 0;
+      s_nErrorCount   : DInt := 0;
+   END_VAR
+
+
+BEGIN
+
+   REGION 01_INPUT_VALIDATION
+      s_bResetTrig    := in_bReset AND NOT s_bResetEdgeMem;
+      s_bResetEdgeMem := in_bReset;
+
+      IF s_bResetTrig THEN
+         out_bError := FALSE; out_wErrorCode := 16#0000;
+         IF s_nStep = 99 THEN s_nStep := 0; END_IF;
+      END_IF;
+
+      IF NOT in_bEnable THEN
+         out_bReady := FALSE; s_nStep := 0; RETURN;
+      END_IF;
+
+      // EMERGENCY has highest priority — immediately overrides any mode
+      IF in_bEmergency THEN
+         out_bModeEmergency := TRUE;
+         out_bModeStop      := FALSE;
+         out_bModeRunning   := FALSE;
+         out_bModeHeld      := FALSE;
+         out_nCurrentMode   := 0;   // M00 Emergency
+         s_nStep := 0;
+         RETURN;
+      ELSE
+         out_bModeEmergency := FALSE;
+      END_IF;
+
+      // Conflict: multiple commands active (simplified check: Stop+Start)
+      IF in_bCmdStop AND in_bCmdStart THEN
+         IF NOT out_bError THEN
+            out_bError := TRUE; out_wErrorCode := 16#0002;   // 16#0002 = Conflicting cmds
+            s_nErrorCount := s_nErrorCount + 1;
+         END_IF;
+         s_nStep := 99;
+      END_IF;
+   END_REGION
+
+
+   REGION 02_STATE_MACHINE
+      CASE s_nStep OF
+
+         0:  // STOPPED (M01)
+            out_bModeStop    := TRUE;
+            out_bModeRunning := FALSE;
+            out_bModeHeld    := FALSE;
+            out_nCurrentMode := 1;
+            out_bReady       := TRUE;
+
+            IF in_bCmdStart THEN
+               // Validate transition: Stop → Running is allowed
+               out_bModeStop := FALSE; s_nStep := 10;
+            END_IF;
+            IF in_bCmdAbort THEN
+               out_bError := TRUE; out_wErrorCode := 16#0001;   // 16#0001 = Invalid transition
+               s_nErrorCount := s_nErrorCount + 1;
+               s_nStep := 99;
+            END_IF;
+
+         10: // RUNNING (M02)
+            out_bModeRunning := TRUE;
+            out_bModeStop    := FALSE;
+            out_bModeHeld    := FALSE;
+            out_bModeComplete := FALSE;
+            out_nCurrentMode := 2;
+
+            IF in_bCmdStop THEN
+               out_bModeRunning := FALSE; s_nStep := 0;
+            ELSIF in_bCmdHold THEN
+               out_bModeRunning := FALSE; s_nStep := 20;
+            ELSIF in_bCmdSuspend THEN
+               out_bModeRunning := FALSE; s_nStep := 30;
+            ELSIF in_bCmdComplete THEN
+               out_bModeRunning := FALSE; s_nStep := 40;
+            END_IF;
+
+         20: // HELD (M05)
+            out_bModeHeld    := TRUE;
+            out_bModeRunning := FALSE;
+            out_bModeStop    := FALSE;
+            out_nCurrentMode := 5;
+
+            IF in_bCmdUnhold THEN
+               out_bModeHeld := FALSE; s_nStep := 10;
+            ELSIF in_bCmdStop THEN
+               out_bModeHeld := FALSE; s_nStep := 0;
+            END_IF;
+
+         30: // SUSPENDED (M04)
+            out_nCurrentMode := 4;
+            IF in_bCmdUnsuspend THEN s_nStep := 10; END_IF;
+            IF in_bCmdStop THEN s_nStep := 0; END_IF;
+
+         40: // COMPLETE (M03)
+            out_bModeComplete := TRUE;
+            out_bModeRunning  := FALSE;
+            out_bModeStop     := FALSE;
+            out_bModeHeld     := FALSE;
+            out_nCurrentMode  := 3;
+            out_bReady        := TRUE;
+            // Reset to Stopped, or re-start from Stopped
+            IF in_bCmdStop THEN
+               out_bModeComplete := FALSE; s_nStep := 0;
+            END_IF;
+
+         99: // FAULT
+            out_bModeStop    := FALSE;
+            out_bModeRunning := FALSE;
+            out_bModeHeld    := FALSE;
+            out_bReady       := FALSE;
+            out_nCurrentMode := 0;
+
+      ELSE
+         out_wErrorCode := 16#FFFF; out_bError := TRUE; s_nStep := 99;
+      END_CASE;
+
+      IF s_nStep <> s_nStepLast THEN s_nStepLast := s_nStep; END_IF;
+      s_nModeLast := out_nCurrentMode;
+   END_REGION
+
+
+   REGION 03_OUTPUT_LOGIC
+      out_nState := s_nStep;
+   END_REGION
+
+
+   REGION 04_DIAGNOSTICS
+      // s_nErrorCount: total mode fault events
+   END_REGION
+
+
+END_FUNCTION_BLOCK

@@ -1,0 +1,25 @@
+{
+  "label": "AUTO_VERIFIED_compile | PENDING_PLCSIM_VERIFY",
+  "tia_version": "V19",
+  "files": [
+    "FB_AlarmHandler.scl",
+    "FB_AnalogScale.scl",
+    "FB_ModeManager.scl",
+    "FB_Motor_DOL.scl",
+    "FB_Motor_StarDelta.scl",
+    "FB_Valve_OnOff.scl",
+    "FB_Watchdog.scl",
+    "OB_Diagnostic_OB82.scl",
+    "OB_Main.scl",
+    "OB_RackFailure_OB86.scl",
+    "OB_Startup_OB100.scl",
+    "iDB_AlarmHandler.db",
+    "iDB_ModeManager.db",
+    "iDB_MOT_CONV_002.db",
+    "iDB_MOT_HYD_001.db",
+    "iDB_SEN_OILTEMP_001.db",
+    "iDB_VLV_COOL_001.db",
+    "iDB_Watchdog.db"
+  ],
+  "timestamp": "2026-06-10T18:49:24+00:00"
+}

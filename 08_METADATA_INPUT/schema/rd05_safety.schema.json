@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "rd05_safety.schema.json",
+  "title": "RD05 — Safety Functions (DRAFT_UNVERIFIED default)",
+  "description": "AI NEVER estimates SIL/Category. Certified safety engineer approval is mandatory. Spec: MDSCHEMA_RAWDATA_05_SAFETY.md",
+  "type": "object",
+  "required": ["project_id", "Functions"],
+  "properties": {
+    "project_id": { "type": "string" },
+    "safety_engineer": { "type": "string" },
+    "Functions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["FunctionID", "FunctionName", "TriggerCondition", "SafeAction", "ResetType", "Status"],
+        "properties": {
+          "FunctionID": { "type": "string", "pattern": "^SF\\d{3}$" },
+          "FunctionName": { "type": "string", "minLength": 1 },
+          "SIL_Level": {
+            "type": "string",
+            "enum": ["", "SIL1", "SIL2", "SIL3", "PLr_a", "PLr_b", "PLr_c", "PLr_d", "PLr_e", "N/A"]
+          },
+          "Category": {
+            "type": "string",
+            "enum": ["", "B", "1", "2", "3", "4"]
+          },
+          "TriggerCondition": { "type": "string", "minLength": 1 },
+          "SafeAction": { "type": "string", "minLength": 1 },
+          "ResponseTime_ms": { "type": ["number", "string"] },
+          "ResetType": { "type": "string", "enum": ["Auto", "Manual", "Tooled"] },
+          "F_InputTag": { "type": "string" },
+          "F_OutputTag": { "type": "string" },
+          "F_DB": { "type": "string" },
+          "F_FB": { "type": "string" },
+          "ProofTestInterval_h": { "type": ["number", "string"] },
+          "Verified_By": { "type": "string" },
+          "Notes": { "type": "string" },
+          "Status": {
+            "type": "string",
+            "enum": ["DRAFT_UNVERIFIED", "HUMAN_REVIEWED", "APPROVED", "OBSOLETE"]
+          }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "Status": { "const": "APPROVED" } } },
+            "then": {
+              "required": ["Verified_By", "SIL_Level", "Category"],
+              "properties": {
+                "Verified_By": { "type": "string", "minLength": 3 }
+              }
+            }
+          }
+        ],
+        "additionalProperties": true
+      }
+    }
+  }
+}

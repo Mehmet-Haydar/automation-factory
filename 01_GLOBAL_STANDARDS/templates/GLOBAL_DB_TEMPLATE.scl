@@ -1,0 +1,29 @@
+(*
+================================================================================
+  GLOBAL_DB_TEMPLATE.scl
+  Title          : Global Data Block Template
+  Version        : 0.1.0
+  Last validated : 2026-05
+  Status         : STUB
+  Applies to     : both
+  Prerequisites  : GLOBAL_NAMING_STANDARD.md
+================================================================================
+*)
+
+(* TODO: This file will be filled in per the Sprint plan.
+
+Will include:
+DATA_BLOCK skeleton:
+  - Global DB (for shared data)
+  - Instance DB (bound to a single FB)
+  - UDT-based DB (structured)
+Region discipline:
+  REGION HMI_INTERFACE
+  REGION RECIPE_DATA
+  REGION DIAGNOSTICS
+Optimized Access ON, attributes defined.
+
+To fill in, open a new chat:
+  - Paste PROJECT_VISION.md, SKELETON_BLUEPRINT.md, PROGRESS_TRACKER.md
+  - Open this file, fill in the content
+*)

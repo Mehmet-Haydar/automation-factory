@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "rd12_usecase.schema.json",
+  "title": "RD12 — Use Cases",
+  "description": "Per-project use cases. FAT/SAT source. Spec: MDSCHEMA_RAWDATA_12_USECASE.md",
+  "type": "object",
+  "required": ["project_id", "UseCases"],
+  "properties": {
+    "project_id": { "type": "string" },
+    "UseCases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["UseCaseID", "UseCaseName", "Actor", "Category", "Precondition", "Trigger", "Steps", "Postcondition", "FATTestable", "Status"],
+        "properties": {
+          "UseCaseID": { "type": "string", "pattern": "^UC\\d{3}$" },
+          "UseCaseName": { "type": "string", "minLength": 1 },
+          "Actor": { "type": "string", "enum": ["Operator", "Supervisor", "Technician", "System"] },
+          "Category": {
+            "type": "string",
+            "enum": ["NormalOperation", "Emergency", "Maintenance", "Startup", "Shutdown", "Calibration"]
+          },
+          "Precondition": { "type": "string", "minLength": 1 },
+          "Trigger": { "type": "string", "minLength": 1 },
+          "Steps": { "type": "string", "minLength": 10 },
+          "Postcondition": { "type": "string", "minLength": 1 },
+          "Exceptions": { "type": "string" },
+          "LinkedFlowStep": { "type": "string" },
+          "LinkedMode": { "type": "string", "pattern": "^(M\\d{2}|)$" },
+          "LinkedFB": { "type": "string" },
+          "FATTestable": { "type": "string", "enum": ["Y", "N"] },
+          "Notes": { "type": "string" },
+          "Status": { "type": "string", "enum": ["Active", "Inactive", "Spare"] }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

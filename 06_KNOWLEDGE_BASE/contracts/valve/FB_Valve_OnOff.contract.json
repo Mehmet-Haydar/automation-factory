@@ -1,0 +1,311 @@
+{
+  "_schema_version": "1.0.0",
+  "contract_version": "1.0.0",
+  "block": {
+    "name": "FB_VALVE_ONOFF",
+    "version": "1.0.0",
+    "type": "FB",
+    "domain": "valve",
+    "device_type": "OnOff",
+    "platform": "S7_1500_TIA_V18+",
+    "source": "Factory",
+    "lifecycle": "DRAFT",
+    "description": "2-way on/off valve. Open/close command, dual feedback (open + closed limit), stuck-valve detection."
+  },
+  "interface": {
+    "inputs": [
+      {
+        "name": "in_bEnable",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bReset",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bManualMode",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bOpenCmd",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bCloseCmd",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bFeedbackOpen",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bFeedbackClosed",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_tOpenTimeout",
+        "iec_type": "Time",
+        "default": "T#5S",
+        "required": true
+      },
+      {
+        "name": "in_tCloseTimeout",
+        "iec_type": "Time",
+        "default": "T#5S",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "name": "out_bOpenOutput",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bCloseOutput",
+        "iec_type": "Bool",
+        "default": false,
+        "required": false,
+        "description": "Optional — for valves with active close coil"
+      },
+      {
+        "name": "out_bReadyOpen",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bReadyClosed",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bReady",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bError",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_wErrorCode",
+        "iec_type": "Word",
+        "default": "16#0000",
+        "required": true
+      },
+      {
+        "name": "out_nState",
+        "iec_type": "Int",
+        "default": 0,
+        "required": true
+      }
+    ],
+    "in_out": [],
+    "static_vars": [
+      {
+        "name": "s_bResetEdgeMem",
+        "iec_type": "Bool"
+      },
+      {
+        "name": "s_bResetTrig",
+        "iec_type": "Bool"
+      },
+      {
+        "name": "s_nStep",
+        "iec_type": "Int"
+      },
+      {
+        "name": "s_tonOpenTO",
+        "iec_type": "TON"
+      },
+      {
+        "name": "s_tonCloseTO",
+        "iec_type": "TON"
+      }
+    ]
+  },
+  "constraints": {
+    "mandatory_regions": [
+      "01_INPUT_VALIDATION",
+      "02_STATE_MACHINE",
+      "03_OUTPUT_LOGIC",
+      "04_DIAGNOSTICS"
+    ],
+    "mandatory_behaviors": [
+      {
+        "id": "B-VO-001",
+        "description": "Reset rising edge",
+        "check_pattern": "s_bResetTrig\\s*:=\\s*.*in_bReset.*AND\\s*NOT.*s_bResetEdgeMem",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-VO-002",
+        "description": "Open timeout timer present",
+        "check_pattern": "s_tonOpenTO",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-VO-003",
+        "description": "Close timeout timer present",
+        "check_pattern": "s_tonCloseTO",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-VO-004",
+        "description": "Open and Close commands mutually exclusive check",
+        "check_pattern": "in_bOpenCmd.*in_bCloseCmd|conflict|16#0003",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-VO-005",
+        "description": "Error code 16#0001 (no open feedback) present",
+        "check_pattern": "16#0001",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-VO-006",
+        "description": "Error code 16#0002 (no close feedback) present",
+        "check_pattern": "16#0002",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-VO-007",
+        "description": "FB name is FB_VALVE_ONOFF",
+        "check_pattern": "FUNCTION_BLOCK\\s+\"?FB_VALVE_ONOFF\"?",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-VO-008",
+        "description": "Optimized Access declared",
+        "check_pattern": "S7_Optimized_Access\\s*:=\\s*'TRUE'",
+        "severity": "MUST"
+      }
+    ],
+    "forbidden_patterns": [
+      "CURRENT_TIME\\(\\)",
+      "GET_SYSTIME\\(\\)"
+    ],
+    "error_codes": [
+      {
+        "hex": "16#0001",
+        "meaning": "Open cmd but no open feedback within in_tOpenTimeout"
+      },
+      {
+        "hex": "16#0002",
+        "meaning": "Close cmd but no closed feedback within in_tCloseTimeout"
+      },
+      {
+        "hex": "16#0003",
+        "meaning": "Open and Close commands both active simultaneously"
+      }
+    ]
+  },
+  "gate": {
+    "checks": [
+      {
+        "id": "G-01",
+        "type": "structural",
+        "description": "Structural balance",
+        "required": true
+      },
+      {
+        "id": "G-02",
+        "type": "contract_interface",
+        "description": "Required ports",
+        "required": true
+      },
+      {
+        "id": "G-03",
+        "type": "contract_behavior",
+        "description": "MUST behaviors",
+        "required": true
+      },
+      {
+        "id": "G-04",
+        "type": "contract_error_codes",
+        "description": "Error codes in SCL",
+        "required": true
+      },
+      {
+        "id": "G-05",
+        "type": "forbidden_pattern",
+        "description": "No proprietary calls",
+        "required": true
+      },
+      {
+        "id": "G-06",
+        "type": "plcrex",
+        "description": "PLCreX optional",
+        "required": false
+      }
+    ]
+  },
+  "prompt_binding": {
+    "file": "04_AI_PROMPTS/code_gen/valve/PROMPT_VALVE_2WAY_ONOFF.md",
+    "version": "1.0.0",
+    "last_synced": "2026-05-30"
+  },
+  "duplicate_detection": {
+    "alternatives": [
+      "FB_VALVE_3WAY",
+      "FB_VALVE_MODULATING"
+    ],
+    "note": "2-way on/off. Use 3Way for diverter valves, Modulating for continuous control."
+  },
+  "meta": {
+    "source": "factory",
+    "license": "MIT",
+    "safety_class": "STANDARD",
+    "target_platform": "TIA Portal V18+",
+    "compatible_tia": [
+      "V18",
+      "V19"
+    ]
+  },
+  "behaviors": [
+    {
+      "id": "OPEN_TIMEOUT",
+      "given": "in_bOpenCmd=TRUE, in_bFeedbackOpen=FALSE",
+      "when": "in_bFeedbackOpen remains FALSE for >= in_tOpenTimeout",
+      "then": "out_bError=TRUE AND out_wErrorCode=16#0001 AND out_bOpenOutput=FALSE"
+    },
+    {
+      "id": "CLOSE_TIMEOUT",
+      "given": "in_bCloseCmd=TRUE, in_bFeedbackClosed=FALSE",
+      "when": "in_bFeedbackClosed remains FALSE for >= in_tCloseTimeout",
+      "then": "out_bError=TRUE AND out_wErrorCode=16#0002 AND out_bCloseOutput=FALSE"
+    },
+    {
+      "id": "CMD_CONFLICT",
+      "given": "in_bOpenCmd=TRUE AND in_bCloseCmd=TRUE",
+      "when": "simultaneous commands detected",
+      "then": "out_bError=TRUE AND out_wErrorCode=16#0003 AND both outputs=FALSE"
+    }
+  ],
+  "acceptance": {
+    "contract_check": true,
+    "compile_check": true,
+    "sim_test": true,
+    "human_signoff": true
+  }
+}

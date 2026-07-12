@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <!-- I-A4: strict CSP. JS and styles come only from the local webgui
+       package; images and fonts are bundled or data: URIs. The previous
+       Google Fonts CDN link is removed — styles.css already falls back to
+       Inter / JetBrains Mono via the OS / Segoe UI / Consolas, so the
+       desktop window stays unchanged even though external CDN traffic is
+       eliminated (DNS hijack / CDN compromise / offline-launch failure
+       all become non-issues). -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self';
+                 script-src 'self';
+                 style-src-elem 'self';
+                 style-src-attr 'unsafe-inline';
+                 img-src 'self' data:;
+                 font-src 'self' data:;
+                 connect-src 'self';
+                 frame-src 'none';
+                 object-src 'none';
+                 base-uri 'self';
+                 form-action 'none';">
+  <title>AUTOMATION_FACTORY — Workbench</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- TOP BAR -->
+    <div class="topbar">
+      <div class="logo-group">
+        <div class="logo-box"><span class="ic" data-i="factory" data-s="13"></span></div>
+        <div class="logo-name">Factory</div>
+        <!-- B-11: no hardcoded version — filled from get_state().version so a
+     support screenshot never shows a stale number -->
+<div class="logo-ver" id="app-version"></div>
+      </div>
+      <div class="vsep"></div>
+      <div class="icon-btn" id="btn-new-project" title="New Project" data-i18n-title="top.new_project"><span class="ic" data-i="folder-plus" data-s="15"></span></div>
+      <div class="icon-btn" id="btn-open-project" title="Open Project" data-i18n-title="top.open_project"><span class="ic" data-i="folder-open" data-s="15"></span></div>
+      <div class="vsep"></div>
+      <div class="breadcrumb" id="breadcrumb">
+        <span>customer_projects</span>
+        <span class="ic" data-i="chevron-right" data-s="11"></span>
+        <span class="cur" id="bc-project">—</span>
+      </div>
+      <div class="cmd-wrap">
+        <div class="cmd-trigger" id="cmd-trigger">
+          <span class="ic" data-i="search" data-s="12"></span>
+          <span data-i18n="top.search">Search files, prompts, gates…</span>
+          <span class="kbd">⌘K</span>
+        </div>
+      </div>
+      <div class="top-right">
+        <div class="icon-btn" id="btn-theme" title="Toggle theme" data-i18n-title="top.toggle_theme"><span class="ic" data-i="moon" data-s="15"></span></div>
+        <div class="icon-btn" id="btn-settings" title="Settings" data-i18n-title="top.settings"><span class="ic" data-i="settings" data-s="15"></span></div>
+        <div class="avatar">MH</div>
+      </div>
+    </div>
+
+    <!-- GATE NAV BAR (always visible below topbar) -->
+    <div class="gate-nav-bar" id="gate-nav-bar">
+      <div class="gnb-steps" id="gnb-steps"></div>
+      <div class="gnb-right">
+        <div class="gnb-timeline-btn" id="gnb-timeline-btn">
+          <span class="ic" data-i="history" data-s="11"></span><span data-i18n="gnb.timeline">Timeline</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px">
+          <span class="gnb-gate-label" id="gnb-gate-label">GATE —/7</span>
+          <span class="gnb-gate-name" id="gnb-gate-name">—</span>
+        </div>
+        <span class="gnb-pct" id="gnb-pct">—%</span>
+      </div>
+    </div>
+
+    <!-- BODY -->
+    <div class="body-row">
+      <!-- ACTIVITY BAR -->
+      <div class="activitybar">
+        <!-- Group: current project (production flow) -->
+        <div class="act-group-label" title="Views for the currently open project" data-i18n="act.group_project">PROJECT</div>
+        <div class="act-item"><div class="act-btn active" data-view="explorer" title="Explorer — project files" data-i18n-title="act.explorer"><span class="ic" data-i="layers" data-s="17"></span></div></div>
+        <div class="act-item"><div class="act-btn" data-view="dashboard" title="Dashboard — project status" data-i18n-title="act.dashboard"><span class="ic" data-i="zap" data-s="17"></span></div></div>
+        <div class="act-item"><div class="act-btn" data-view="gate" title="Gates — gate workflow" data-i18n-title="act.gates"><span class="ic" data-i="chip" data-s="17"></span></div></div>
+        <div class="act-item"><div class="act-btn" data-view="flowchart" title="Machine Dossier — visual pack + decision table + RD03 sequence" data-i18n-title="act.flowchart"><span class="ic" data-i="flow" data-s="17"></span></div></div>
+        <div class="act-item"><div class="act-btn" data-view="report" title="Report — customer output" data-i18n-title="act.report"><span class="ic" data-i="file-text" data-s="17"></span></div></div>
+        <div class="act-item"><div class="act-btn" data-view="git" title="Git — version control" data-i18n-title="act.git"><span class="ic" data-i="git-branch" data-s="17"></span><span class="act-badge" id="act-git-badge" style="display:none"></span></div></div>
+        <div class="act-item"><div class="act-btn" data-view="vcompare" title="Version Compare — diff legacy project version folders" data-i18n-title="act.vcompare"><span class="ic" data-i="history" data-s="17"></span></div></div>
+        <!-- Group: shared library workspace (project-independent) -->
+        <div class="act-sep"></div>
+        <div class="act-group-label" title="Shared resources — reference FB library, prompts, hardware specs (project-independent)" data-i18n="act.group_library">LIBRARY</div>
+        <div class="act-item"><div class="act-btn" data-view="prompt" title="Prompts — AI prompt workspace" data-i18n-title="act.prompts"><span class="ic" data-i="sparkles" data-s="17"></span></div></div>
+        <div class="act-item"><div class="act-btn" data-view="library" title="Library — reference FB library" data-i18n-title="act.library"><span class="ic" data-i="package" data-s="17"></span></div></div>
+        <div class="act-item"><div class="act-btn" data-view="hardware" title="Hardware — BOM and device specs" data-i18n-title="act.hardware"><span class="ic" data-i="cpu" data-s="17"></span></div></div>
+        <div class="spacer"></div>
+      </div>
+
+      <!-- SIDEBAR -->
+      <div class="sidebar" id="sidebar">
+        <div class="sidebar-head">
+          <div class="caps" data-i18n="side.explorer">Explorer</div>
+          <div class="tools">
+            <div class="icon-btn"><span class="ic" data-i="plus" data-s="13"></span></div>
+            <div class="icon-btn" id="btn-refresh-tree"><span class="ic" data-i="refresh" data-s="13"></span></div>
+          </div>
+        </div>
+        <div class="proj-row">
+          <div class="proj-name"><span class="ic" data-i="folder-open" data-s="13"></span><span id="proj-name">—</span></div>
+          <div class="proj-badge" id="proj-badge">PROJECT</div>
+        </div>
+        <div class="tree" id="tree"></div>
+        <!-- 3-part sidebar (2026-07-07 user decision): tree above, then the
+             engineer's DESK (editable surfaces) and the read-only REVIEW
+             list. The old passive Reports list is retired — reports live
+             under Review; handover keeps its one button on the desk. -->
+        <div class="reports-panel" id="workdesk-panel" style="display:none">
+          <div class="sidebar-head" style="border-top:1px solid var(--border)">
+            <div class="caps" data-i18n="side.workdesk">Workdesk</div>
+            <div class="tools">
+              <div class="icon-btn" id="btn-handover" title="Export handover package (ZIP)" data-i18n-title="side.handover"><span class="ic" data-i="package" data-s="13"></span></div>
+            </div>
+          </div>
+          <div id="workdesk-list"></div>
+        </div>
+        <div class="reports-panel" id="reading-panel" style="display:none">
+          <div class="sidebar-head" style="border-top:1px solid var(--border)">
+            <div class="caps" data-i18n="side.reading">Review (read-only)</div>
+          </div>
+          <div id="reading-list"></div>
+        </div>
+        <div class="sidebar-resizer" id="sidebar-resizer"></div>
+        <div class="sidebar-foot">
+          <span class="ic" data-i="git-branch" data-s="11"></span>
+          <span class="mono" id="sidebar-branch">main</span><span style="color:var(--fg-dim)">·</span><span id="git-changes">—</span>
+        </div>
+      </div>
+
+      <!-- CENTER -->
+      <div class="center">
+        <div class="editor">
+          <div class="tabbar" id="tabbar">
+            <div class="tab-fill"></div>
+            <div class="tab-tools">
+              <span class="ic" data-i="panel-bottom" data-s="14" title="Alt panel"></span>
+              <span class="ic" data-i="panel-right" data-s="14" id="split-toggle" title="Split editor (Ctrl+\\)"></span>
+            </div>
+          </div>
+          <div class="ed-breadcrumb" id="ed-breadcrumb" style="display:none">
+            <span class="ic" data-i="file-code" data-s="11"></span>
+            <span id="ed-bc-path">—</span>
+            <span class="fill"></span>
+            <span class="saved" id="ed-saved">● Saved</span>
+            <span style="color:var(--fg-dim)">·</span>
+            <span id="ed-pos">Ln 1, Col 1</span>
+            <span style="color:var(--fg-dim)">·</span>
+            <span class="ed-mode-btn" id="ed-mode-btn" title="Toggle edit / preview mode">Edit</span>
+          </div>
+          <div class="codewrap" id="codewrap">
+            <div class="editor-empty" id="editor-empty" data-i18n="ed.empty">Select a file from the Explorer — or press ⌘K</div>
+          </div>
+        </div>
+
+        <!-- BOTTOM PANEL -->
+        <div class="bottom-resizer" id="bottom-resizer" title="Drag to resize"></div>
+        <div class="bottom" id="bottom-panel">
+          <div class="bottom-tabs">
+            <div class="btab" data-tab="inspector" data-i18n="bt.inspector">Inspector</div>
+            <div class="btab active" data-tab="diagnostics"><span data-i18n="bt.diagnostics">Diagnostics</span><span class="count" id="diag-count">0</span></div>
+            <div class="btab" data-tab="ai" data-i18n="bt.ai_preview">AI Preview</div>
+            <div class="btab" data-tab="terminal"><span data-i18n="bt.terminal">Terminal</span><span class="tab-dot" id="term-dot" title="New errors in the terminal log"></span></div>
+            <div class="tab-fill"></div>
+            <div class="tab-tools"><span class="ic" data-i="filter" data-s="12"></span><span class="ic" data-i="x" data-s="12"></span></div>
+          </div>
+          <div class="bottom-body diag" id="diag"></div>
+        </div>
+      </div>
+
+      <!-- RIGHT RAIL -->
+      <div class="rightrail">
+        <div class="rr-sec" id="rr-next" style="display:none">
+          <div class="caps" style="margin-bottom:8px" data-i18n="rr.next_step">Next step</div>
+          <button class="btn primary" id="rr-next-btn" style="width:100%;justify-content:center"></button>
+          <div id="rr-next-hint" style="font-size:11px;color:var(--fg-dim);margin-top:6px"></div>
+        </div>
+        <div class="rr-sec" id="rr-gate-sec" title="Gates = the 7-step quality workflow — each gate must be completed (and approved where required) before the next">
+          <div class="head"><div class="caps" id="gate-caps">Gate 1/7</div><span class="mono" style="font-size:10px;color:var(--fg-dim)" id="gate-pct">—</span></div>
+          <div class="gate-title" id="gate-title">—</div>
+          <div class="gate-bar" id="gate-bar"></div>
+          <div class="gate-sub" id="gate-sub">Platform <span class="mono" id="gate-platform" style="color:var(--fg)">—</span></div>
+        </div>
+        <div class="rr-sec" style="border-bottom:none">
+          <div class="caps" style="margin-bottom:8px" id="actions-caps" data-i18n="rr.actions_project">Project actions</div>
+          <div id="actions"></div>
+        </div>
+        <!-- Prompt Library + Block Library panels removed from the workspace
+             right rail (2026-06-29): they overlapped with the Actions panel
+             and the automated pre-analysis, and the prompt copy-to-clipboard
+             path is being retired. FB blocks remain on the Block Library page. -->
+      </div>
+    </div>
+
+    <!-- SWITCHABLE FULL VIEWS (hidden by default) -->
+    <div class="dash-view" id="dashboard-view"></div>
+    <div class="dash-view" id="report-view"></div>
+    <div class="dash-view" id="onboarding-view"></div>
+    <div class="dash-view" id="git-view"></div>
+    <div class="dash-view" id="gate-view"></div>
+    <div class="dash-view" id="flowchart-view"></div>
+    <div class="dash-view" id="prompt-view"></div>
+    <div class="dash-view" id="hardware-view"></div>
+    <div class="dash-view" id="library-view"></div>
+    <div class="dash-view" id="vcompare-view"></div>
+
+    <!-- STATUS BAR -->
+    <div class="statusbar">
+      <div class="seg"><span class="ic" data-i="git-branch" data-s="11"></span><span class="mono" id="status-branch">main</span></div>
+      <div class="sdiv"></div>
+      <div class="seg click" id="status-gate" title="Gate Timeline">
+        <span style="font-weight:600">Gate</span><span class="mono" style="font-weight:700" id="status-gate-num">1/7</span>
+        <span class="gate-dots" id="gate-dots"></span>
+      </div>
+      <div class="sdiv"></div>
+      <div class="seg"><span class="ic" data-i="cpu" data-s="11"></span><span id="status-platform">—</span></div>
+      <div class="sdiv"></div>
+      <div class="seg"><span class="ic" data-i="sparkles" data-s="11"></span><span class="mono" id="status-model">—</span></div>
+      <div class="fill"></div>
+      <div class="seg"><span id="status-pos">Ln 1, Col 1</span></div>
+      <div class="sdiv"></div>
+      <div class="seg">UTF-8</div>
+      <div class="sdiv"></div>
+      <div class="seg"><span id="status-theme">Emerald · Dark</span></div>
+    </div>
+  </div>
+
+  <!-- COMMAND PALETTE -->
+  <div class="overlay" id="palette-overlay">
+    <div class="palette">
+      <input id="palette-input" placeholder="Go to file, prompt, gate or action…" data-i18n-ph="pal.ph" />
+      <div class="results" id="palette-results"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="vendor/mermaid.min.js"></script>
+  <script src="i18n.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,365 @@
+// ============================================================================
+// FB_Motor_Standard — Standard Motor Control (DOL + HMI faceplate)
+// ============================================================================
+// Source    : Factory Library (AUTOMATION_FACTORY)
+// Contract  : 06_KNOWLEDGE_BASE/contracts/motor/FB_Motor_DOL.contract.json
+// Template  : 01_GLOBAL_STANDARDS/templates/GLOBAL_FB_TEMPLATE.scl
+// Platform  : TIA Portal V18+  (S7-1500)
+// Version   : 1.0.0
+// Lifecycle : AUTO_VERIFIED_structural | PENDING_TIA_VERIFY
+//
+// Purpose:
+//   DOL motor control with HMI faceplate (UDT_Motor) and mode management.
+//   Includes: run-feedback watchdog, welded-contactor detection,
+//   overload protection, rising-edge reset, optional speed output for VFD.
+//
+// PENDING_TIA_VERIFY:
+//   Structural gate passed. Siemens TIA Portal compile + PLCSIM run
+//   has NOT been performed. Human engineer must verify before production use.
+// ============================================================================
+// ============================================================
+// *** SAFETY NOTICE ***
+// This function block is NOT designed or validated for use in
+// Safety Instrumented Systems (SIS) per IEC 61508 / IEC 62061,
+// or as a safety-related control function per ISO 13849 (PLr).
+// For functional safety applications, use only certified safety
+// hardware or F-CPU safety functions. A qualified safety engineer
+// must review all applications involving process or personnel safety.
+// ============================================================
+
+// ============================================================================
+// UDT_Motor — Motor Data Structure (HMI / SCADA expose)
+// NOTE: the TYPE must precede the FB in this source — TIA Openness
+// GenerateBlocksFromSource processes top-to-bottom and rejects the FB
+// interface otherwise ("Data type UDT_Motor is unknown", live 2026-07-06).
+// ============================================================================
+TYPE "UDT_Motor"
+   STRUCT
+      bInitialized : BOOL := FALSE;       // First-run flag
+      bRunning : BOOL := FALSE;           // Motor running
+      bFault : BOOL := FALSE;             // Fault active
+      iFaultCode : WORD := 16#0000;       // Fault code (WORD — no WORD_TO_INT conversion needed)
+      rSetSpeed : REAL := 0.0;            // Speed setpoint (%)
+      rActSpeed : REAL := 0.0;            // Actual speed (%)
+      tRuntime : DInt := 0;               // Total runtime in seconds (HMI converts to hh:mm:ss)
+      diStartCount : DINT := 0;           // Start counter (maintenance)
+   END_STRUCT;
+END_TYPE
+
+
+FUNCTION_BLOCK "FB_Motor_Standard"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 1.0
+
+   VAR_INPUT
+      // === Required DOL interface (per FB_Motor_DOL.contract.json) ===
+      in_bEnable           : Bool := FALSE;  // FB enable (FALSE stops output)
+      in_bReset            : Bool := FALSE;  // Fault reset (rising edge only)
+      in_bManualMode       : Bool := FALSE;  // TRUE = manual (HMI direct control)
+      in_bStartCmd         : Bool := FALSE;  // Auto start command
+      in_bStopCmd          : Bool := FALSE;  // Auto stop command
+      in_bManualStart      : Bool := FALSE;  // Manual start (active when in_bManualMode=TRUE)
+      in_bManualStop       : Bool := FALSE;  // Manual stop (active when in_bManualMode=TRUE)
+      in_bFeedbackRun      : Bool := FALSE;  // Run feedback from contactor auxiliary contact
+      in_bFeedbackOverload : Bool := FALSE;  // Overload / thermal relay (TRUE = fault)
+      in_tStartTimeout     : Time := T#2S;   // Max wait for run feedback after start cmd
+      in_tStopTimeout      : Time := T#2S;   // Max wait for feedback to drop after stop cmd
+      // === Extended interface (mode management + VFD option) ===
+      in_iMode             : Int  := 1;      // 0=Emergency, 1=AUTO, 2=MAN
+      in_rSetSpeed         : Real := 0.0;    // Speed setpoint % (VFD option; 0.0 for DOL)
+      in_tFbkDebounce      : Time := T#200MS; // Debounce for RUNNING feedback loss (prevents nuisance trip)
+   END_VAR
+
+   VAR_OUTPUT
+      // === Required DOL outputs ===
+      out_bMotorRun  : Bool := FALSE;        // Forward run output to contactor coil
+      out_bReady     : Bool := FALSE;        // FB ready (no fault, enabled)
+      out_bError     : Bool := FALSE;        // Fault active
+      out_wErrorCode : Word := 16#0000;      // Active fault code (see contract error_codes)
+      out_nState     : Int  := 0;            // Current state machine step
+      out_dRunHours  : DInt := 0;            // Total operating seconds counter
+      out_nErrorCount: DInt := 0;            // Total fault event count (HMI / historian)
+      // === Extended outputs ===
+      out_rActSpeed  : Real := 0.0;          // Actual speed — read from real VFD feedback input
+   END_VAR
+
+   VAR_IN_OUT
+      inout_udMotorData : "UDT_Motor";       // Motor data structure for HMI faceplate
+   END_VAR
+
+   VAR
+      // === Required DOL static vars (checked by acceptance gate) ===
+      s_bResetEdgeMem : Bool := FALSE;       // Rising-edge memory for reset detection
+      s_bResetTrig    : Bool := FALSE;       // Rising-edge trigger (one-shot reset)
+      s_nStep         : Int  := 0;           // State machine current step
+      s_nStepLast     : Int  := 0;           // State machine previous step
+      s_tonStartTO    : TON;                 // Start feedback watchdog timer
+      s_tonStopTO     : TON;                 // Stop feedback watchdog (welded-contactor)
+      s_tonFbkDebounce: TON;                 // Debounce timer for RUNNING feedback loss
+      // === D-1: Restart inhibit after enable rising edge ===
+      s_bRestartInhibit : Bool := FALSE;     // Inhibit restart after enable rising edge
+      s_bEnableEdgeMem  : Bool := FALSE;     // Edge memory for enable signal
+      // === Extended static vars ===
+      s_bInitialized  : Bool := FALSE;       // First-scan init flag
+      s_dRunSecs      : DInt := 0;           // Internal seconds accumulator
+      s_tonRunTick    : TON;                 // 1-second tick for scan-independent run-time counting
+      s_nErrorCount   : DInt := 0;           // Total fault events
+      s_nStartCount   : DInt := 0;           // Total start attempts (for maintenance)
+   END_VAR
+
+   VAR_TEMP
+      t_bStartEnable  : Bool;               // Derived start permission
+   END_VAR
+
+
+BEGIN
+
+
+   //=========================================================================
+   // REGION 01_INPUT_VALIDATION
+   // HMI struct init, rising-edge reset, enable/emergency gate, overload.
+   //=========================================================================
+   REGION 01_INPUT_VALIDATION
+
+      // Detect enable rising edge — inhibit restart until operator resets
+      IF in_bEnable AND NOT s_bEnableEdgeMem THEN
+          s_bRestartInhibit := TRUE;
+      END_IF;
+      s_bEnableEdgeMem := in_bEnable;
+      IF s_bResetTrig THEN
+          s_bRestartInhibit := FALSE;
+      END_IF;
+
+      // First-scan init of HMI data structure
+      IF NOT s_bInitialized THEN
+         inout_udMotorData.bRunning   := FALSE;
+         inout_udMotorData.bFault     := FALSE;
+         inout_udMotorData.iFaultCode := 0;
+         inout_udMotorData.rSetSpeed  := 0.0;
+         inout_udMotorData.rActSpeed  := 0.0;
+         inout_udMotorData.tRuntime   := 0;
+         s_bInitialized               := TRUE;
+      END_IF;
+
+      // Rising-edge reset (MUST: level-triggered reset is forbidden — B-DOL-001)
+      s_bResetTrig    := in_bReset AND NOT s_bResetEdgeMem;
+      s_bResetEdgeMem := in_bReset;
+
+      IF s_bResetTrig THEN
+         out_bError     := FALSE;
+         out_wErrorCode := 16#0000;
+         IF s_nStep = 99 THEN
+            s_nStep := 0;
+         END_IF;
+      END_IF;
+
+      // FB disabled or Emergency mode: force idle immediately
+      IF NOT in_bEnable OR in_iMode = 0 THEN
+         s_nStep       := 0;
+         out_bMotorRun := FALSE;
+         out_bReady    := FALSE;
+         // Sync HMI UDT before early exit — prevents stale bRunning/bFault on HMI
+         inout_udMotorData.bRunning   := FALSE;
+         inout_udMotorData.bFault     := out_bError;
+         inout_udMotorData.iFaultCode := out_wErrorCode;
+         RETURN;
+      END_IF;
+
+      // Overload: immediate stop + fault regardless of state (B-DOL-004)
+      IF in_bFeedbackOverload THEN
+         out_bMotorRun := FALSE;
+         IF NOT out_bError THEN
+            out_bError     := TRUE;
+            out_wErrorCode := 16#0003;   // 16#0003 = Overload / thermal relay triggered
+            s_nErrorCount  := s_nErrorCount + 1;
+         END_IF;
+         s_nStep := 99;
+      END_IF;
+
+   END_REGION
+
+
+   //=========================================================================
+   // REGION 02_STATE_MACHINE
+   // States: 0=IDLE, 10=STARTING, 20=RUNNING, 30=STOPPING, 99=FAULT
+   //=========================================================================
+   REGION 02_STATE_MACHINE
+
+      // Manual/Auto conflict: manual mode active but auto start command also given (16#0004)
+      IF (in_bManualMode OR in_iMode = 2) AND in_bStartCmd THEN
+         out_bError     := TRUE;
+         out_wErrorCode := 16#0004;   // 16#0004 = Manual/Auto mode conflict
+         s_nErrorCount  := s_nErrorCount + 1;
+         s_nStep        := 99;
+      END_IF;
+
+      // Derive start permission from mode
+      IF in_iMode = 2 OR in_bManualMode THEN
+         t_bStartEnable := in_bManualStart AND NOT in_bManualStop;
+      ELSE
+         t_bStartEnable := in_bStartCmd AND NOT in_bStopCmd;
+      END_IF;
+
+      CASE s_nStep OF
+
+         0:  // IDLE — ready for start
+            out_bReady    := TRUE;
+            out_bMotorRun := FALSE;
+            s_tonStartTO(IN := FALSE, PT := in_tStartTimeout);
+            s_tonStopTO(IN  := FALSE, PT := in_tStopTimeout);
+            s_tonRunTick(IN := FALSE, PT := T#1S);
+            IF t_bStartEnable AND NOT out_bError AND NOT s_bRestartInhibit THEN
+               s_nStartCount := s_nStartCount + 1;
+               s_nStep := 10;
+            END_IF;
+
+         10: // STARTING — contactor energized, waiting for feedback
+            out_bMotorRun := TRUE;
+            s_tonStartTO(IN := TRUE, PT := in_tStartTimeout);
+
+            IF in_bFeedbackRun THEN
+               s_nStep := 20;   // Feedback received — transition to RUNNING
+            END_IF;
+
+            IF s_tonStartTO.Q THEN
+               // No run feedback within timeout — B-DOL-005
+               out_bMotorRun  := FALSE;
+               out_bError     := TRUE;
+               out_wErrorCode := 16#0001;   // 16#0001 = No run feedback within in_tStartTimeout
+               s_nStep        := 99;
+            END_IF;
+
+         20: // RUNNING
+            out_bMotorRun := TRUE;
+            out_bReady    := FALSE;
+            s_tonStartTO(IN := FALSE, PT := in_tStartTimeout);
+
+            // Run-seconds counter: TON-based — scan-cycle independent
+            s_tonRunTick(IN := TRUE, PT := T#1S);
+            IF s_tonRunTick.Q THEN
+               s_dRunSecs    := s_dRunSecs + 1;
+               out_dRunHours := s_dRunSecs;
+               s_tonRunTick(IN := FALSE, PT := T#1S);
+            END_IF;
+
+            IF NOT t_bStartEnable THEN
+               s_tonFbkDebounce(IN := FALSE, PT := in_tFbkDebounce);
+               s_nStep := 30;   // Stop requested
+            END_IF;
+
+            // Debounced feedback loss check — prevents nuisance trips from contact chatter
+            IF s_nStep = 20 THEN
+               s_tonFbkDebounce(IN := NOT in_bFeedbackRun, PT := in_tFbkDebounce);
+               IF s_tonFbkDebounce.Q THEN
+                  out_bMotorRun  := FALSE;
+                  out_bError     := TRUE;
+                  out_wErrorCode := 16#0006;   // 16#0006 = Feedback signal anomaly (chatter)
+                  s_nErrorCount  := s_nErrorCount + 1;
+                  s_nStep        := 99;
+               END_IF;
+            END_IF;
+
+         30: // STOPPING — waiting for feedback to drop
+            out_bMotorRun := FALSE;
+            s_tonStopTO(IN := TRUE, PT := in_tStopTimeout);
+
+            IF NOT in_bFeedbackRun THEN
+               s_nStep := 0;
+               s_tonStopTO(IN := FALSE, PT := in_tStopTimeout);
+            END_IF;
+
+            IF s_tonStopTO.Q THEN
+               // Feedback still active after stop timeout — welded contactor (B-DOL-006)
+               out_bError     := TRUE;
+               out_wErrorCode := 16#0002;   // 16#0002 = Welded contactor (feedback stuck)
+               s_nStep        := 99;
+            END_IF;
+
+         99: // FAULT — waiting for rising-edge reset
+            out_bMotorRun := FALSE;
+            out_bReady    := FALSE;
+            s_tonStartTO(IN := FALSE, PT := in_tStartTimeout);
+            s_tonStopTO(IN  := FALSE, PT := in_tStopTimeout);
+            // Exit via s_bResetTrig in REGION 01_INPUT_VALIDATION
+
+      ELSE
+         out_bError     := TRUE;
+         out_wErrorCode := 16#FFFF;
+         s_nStep        := 99;
+      END_CASE;
+
+      IF s_nStep <> s_nStepLast THEN
+         s_nStepLast := s_nStep;
+      END_IF;
+
+   END_REGION
+
+
+   //=========================================================================
+   // REGION 03_OUTPUT_LOGIC
+   // Map state machine to outputs.
+   //=========================================================================
+   REGION 03_OUTPUT_LOGIC
+
+      out_nState := s_nStep;
+      // out_rActSpeed: must be wired to a real VFD feedback input by the caller.
+      // Do NOT calculate or ramp out_rActSpeed inside this FB (NO_FAKE_FEEDBACK rule).
+
+   END_REGION
+
+
+   //=========================================================================
+   // REGION 04_DIAGNOSTICS
+   // Sync state to HMI UDT_Motor faceplate data structure.
+   //=========================================================================
+   REGION 04_DIAGNOSTICS
+
+      inout_udMotorData.bRunning    := out_bMotorRun;
+      inout_udMotorData.bFault      := out_bError;
+      inout_udMotorData.iFaultCode  := out_wErrorCode;
+      inout_udMotorData.rSetSpeed   := in_rSetSpeed;
+      inout_udMotorData.rActSpeed   := out_rActSpeed;
+      inout_udMotorData.tRuntime    := s_dRunSecs;
+      inout_udMotorData.diStartCount := s_nStartCount;
+      out_nErrorCount               := s_nErrorCount;
+
+   END_REGION
+
+
+END_FUNCTION_BLOCK
+
+
+// ============================================================================
+// Multi-Instance Example — OB1 Call Pattern
+// ============================================================================
+// Inside OB1 (project-specific wiring — adapt tag names to your project):
+//
+//   "FB_Motor_Standard_DB_Motor01"(
+//       in_bEnable           := TRUE,
+//       in_bReset            := "DB_HMI".bBtn_Motor01_Reset,
+//       in_bManualMode       := "DB_HMI".bManualMode,
+//       in_bStartCmd         := "DB_HMI".bBtn_Motor01_Start,
+//       in_bStopCmd          := "DB_HMI".bBtn_Motor01_Stop,
+//       in_bManualStart      := "DB_HMI".bBtn_Motor01_ManStart,
+//       in_bManualStop       := "DB_HMI".bBtn_Motor01_ManStop,
+//       in_bFeedbackRun      := "MOT_001_RUN_FBK",    // → I-tag (contactor aux)
+//       in_bFeedbackOverload := "MOT_001_OVERLOAD",   // → I-tag (thermal relay)
+//       in_tStartTimeout     := T#3S,
+//       in_tStopTimeout      := T#2S,
+//       in_iMode             := "DB_System".iCurrentMode,
+//       in_rSetSpeed         := "DB_Recipe".rMotor01_Speed,
+//       out_bMotorRun        := "MOT_001_OUT",         // → Q-tag (contactor coil)
+//       out_bReady           =>"DB_Status".bMotor01_Ready,
+//       out_bError           => "DB_Status".bMotor01_Fault,
+//       out_wErrorCode       => "DB_Status".wMotor01_FaultCode,
+//       out_nState           => "DB_Status".nMotor01_State,
+//       out_rActSpeed        => "DB_Status".rMotor01_ActSpeed,
+//       inout_udMotorData    := "DB_Motor01".sMotor
+//   );
+//
+// For a second instance (Motor02), create DB_Motor02 and call again:
+//   "FB_Motor_Standard_DB_Motor02"(...);
+//
+// Multi-instance advantage: ONE FB source, many instances (DB), easy maintenance.
+// out_rActSpeed: wire to real VFD analog feedback tag; leave 0.0 for pure DOL.
+// ============================================================================

@@ -1,0 +1,7 @@
+DATA_BLOCK "iDB_SEN_OILTEMP_001"
+{ S7_Optimized_Access := 'TRUE' }
+"FB_AnalogScale"
+
+BEGIN
+
+END_DATA_BLOCK

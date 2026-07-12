@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "rd07_timing.schema.json",
+  "title": "RD07 — Timing",
+  "description": "Per-project timers/watchdogs. Spec: MDSCHEMA_RAWDATA_07_TIMING.md",
+  "type": "object",
+  "required": ["project_id", "Timers"],
+  "properties": {
+    "project_id": { "type": "string" },
+    "plc_cycle_time_ms": { "type": "integer", "minimum": 1 },
+    "Timers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["TimerID", "TimerName", "TimerType", "PresetValue", "Function", "TriggerCondition", "DB_Instance", "IsWatchdog", "Status"],
+        "properties": {
+          "TimerID": { "type": "string", "pattern": "^TMR_[A-Z0-9]+_\\d{3}$" },
+          "TimerName": { "type": "string", "minLength": 1 },
+          "TimerType": { "type": "string", "enum": ["TON", "TOF", "TP", "TONR"] },
+          "PresetValue": { "type": "string", "pattern": "^T#\\d+(\\.\\d+)?(ms|s|m|h)(\\d+(\\.\\d+)?(ms|s|m|h))*$|^$" },
+          "Function": {
+            "type": "string",
+            "enum": ["StepDelay", "Debounce", "Watchdog", "Timeout", "CycleControl", "AlarmFilter", "Other"]
+          },
+          "TriggerCondition": { "type": "string", "minLength": 1 },
+          "ResetCondition": { "type": "string" },
+          "OutputAction": { "type": "string" },
+          "LinkedStep": { "type": "string", "pattern": "^(S\\d{3}[A-Z]?|)$" },
+          "LinkedAlarm": { "type": "string", "pattern": "^(ALM\\d{4}|)$" },
+          "DB_Instance": { "type": "string", "minLength": 1 },
+          "IsWatchdog": { "type": "string", "enum": ["Y", "N"] },
+          "Notes": { "type": "string" },
+          "Status": { "type": "string", "enum": ["Active", "Inactive", "Spare"] }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "IsWatchdog": { "const": "Y" } } },
+            "then": {
+              "required": ["LinkedAlarm"],
+              "properties": {
+                "LinkedAlarm": { "pattern": "^ALM\\d{4}$" }
+              }
+            }
+          }
+        ],
+        "additionalProperties": true
+      }
+    }
+  }
+}

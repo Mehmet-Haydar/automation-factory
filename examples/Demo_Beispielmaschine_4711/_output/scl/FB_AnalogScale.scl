@@ -1,0 +1,168 @@
+// ============================================================================
+// FB_AnalogScale — Analog Signal Scaling and Validation
+// Source    : Factory Library
+// Contract  : 06_KNOWLEDGE_BASE/contracts/process/FB_AnalogScale.contract.json
+// Lifecycle : AUTO_VERIFIED_structural | PENDING_TIA_VERIFY
+// ============================================================================
+// ============================================================
+// *** SAFETY NOTICE ***
+// This function block is NOT designed or validated for use in
+// Safety Instrumented Systems (SIS) per IEC 61508 / IEC 62061,
+// or as a safety-related control function per ISO 13849 (PLr).
+// For functional safety applications, use only certified safety
+// hardware or F-CPU safety functions. A qualified safety engineer
+// must review all applications involving process or personnel safety.
+// ============================================================
+
+FUNCTION_BLOCK "FB_AnalogScale"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 1.0
+
+   VAR_INPUT
+      in_bEnable    : Bool := FALSE;
+      in_bReset     : Bool := FALSE;
+      in_iRawValue  : Int  := 0;
+      in_rRawMin    : Real := 0.0;
+      in_rRawMax    : Real := 27648.0;
+      in_rEngMin    : Real := 0.0;
+      in_rEngMax    : Real := 100.0;
+      in_rHiHiLimit    : Real := 95.0;
+      in_rHiLimit      : Real := 90.0;
+      in_rLoLimit      : Real := 10.0;
+      in_rLoLoLimit    : Real := 5.0;
+      in_rAlarmDeadband: Real := 0.0;   // Hysteresis band applied to all limit alarms (engineering units)
+   END_VAR
+
+   VAR_OUTPUT
+      out_rEngValue   : Real := 0.0;
+      out_bHiHi       : Bool := FALSE;
+      out_bHi         : Bool := FALSE;
+      out_bLo         : Bool := FALSE;
+      out_bLoLo       : Bool := FALSE;
+      out_bWireBreak  : Bool := FALSE;
+      out_bError      : Bool := FALSE;
+      out_wErrorCode  : Word := 16#0000;
+      out_nState      : Int  := 0;
+   END_VAR
+
+   VAR
+      s_bResetEdgeMem : Bool := FALSE;
+      s_bResetTrig    : Bool := FALSE;
+      s_nStep         : Int  := 0;
+      s_nStepLast     : Int  := 0;
+      s_nErrorCount   : DInt := 0;
+   END_VAR
+
+   VAR_TEMP
+      t_rRaw    : Real;
+      t_rRange  : Real;
+      t_rScaled : Real;
+   END_VAR
+
+
+BEGIN
+
+   REGION 01_INPUT_VALIDATION
+      s_bResetTrig    := in_bReset AND NOT s_bResetEdgeMem;
+      s_bResetEdgeMem := in_bReset;
+
+      IF s_bResetTrig THEN
+         out_bError := FALSE; out_wErrorCode := 16#0000;
+         out_bWireBreak := FALSE;
+         IF s_nStep = 99 THEN s_nStep := 0; END_IF;
+      END_IF;
+
+      IF NOT in_bEnable THEN
+         out_rEngValue := 0.0; out_bError := FALSE;
+         out_bHiHi := FALSE; out_bHi := FALSE;
+         out_bLo := FALSE; out_bLoLo := FALSE;
+         out_bWireBreak := FALSE; s_nStep := 0; RETURN;
+      END_IF;
+
+      // Wire-break detection (4mA corresponds to ~3277 raw; below ~1638 = wire break)
+      t_rRaw := INT_TO_REAL(in_iRawValue);
+      IF t_rRaw < (in_rRawMin - (in_rRawMax - in_rRawMin) * 0.1) THEN
+         out_bWireBreak := TRUE;
+         IF NOT out_bError THEN
+            out_bError := TRUE; out_wErrorCode := 16#0001;   // 16#0001 = Wire break
+            s_nErrorCount := s_nErrorCount + 1;
+         END_IF;
+         s_nStep := 99;
+      // Overrange detection
+      ELSIF t_rRaw > (in_rRawMax + (in_rRawMax - in_rRawMin) * 0.1) THEN
+         IF NOT out_bError THEN
+            out_bError := TRUE; out_wErrorCode := 16#0002;   // 16#0002 = Overrange
+            s_nErrorCount := s_nErrorCount + 1;
+         END_IF;
+         s_nStep := 99;
+      ELSE
+         out_bWireBreak := FALSE;
+      END_IF;
+   END_REGION
+
+
+   REGION 02_STATE_MACHINE
+      CASE s_nStep OF
+
+         0:  // INIT
+            s_nStep := 10;
+
+         10: // SCALING AND ALARM CHECK (linear scale: raw→engineering)
+            t_rRaw   := INT_TO_REAL(in_iRawValue);
+            t_rRange := in_rRawMax - in_rRawMin;
+
+            IF t_rRange > 0.0 THEN
+               t_rScaled := (t_rRaw - in_rRawMin) / t_rRange * (in_rEngMax - in_rEngMin) + in_rEngMin;
+            ELSE
+               t_rScaled := in_rEngMin;
+            END_IF;
+
+            out_rEngValue := t_rScaled;
+
+            // Limit alarms with hysteresis — LoLo evaluated first so Lo can exclude it.
+            // Rising alarms: set at limit, clear at (limit - deadband) to prevent chatter.
+            // Falling alarms: set at limit, clear at (limit + deadband).
+            IF out_bHiHi THEN
+               out_bHiHi := t_rScaled >= (in_rHiHiLimit - in_rAlarmDeadband);
+            ELSE
+               out_bHiHi := t_rScaled >= in_rHiHiLimit;
+            END_IF;
+            IF out_bHi THEN
+               out_bHi := (t_rScaled >= (in_rHiLimit - in_rAlarmDeadband)) AND NOT out_bHiHi;
+            ELSE
+               out_bHi := (t_rScaled >= in_rHiLimit) AND NOT out_bHiHi;
+            END_IF;
+            // LoLo must be evaluated before Lo so Lo can correctly mask it
+            IF out_bLoLo THEN
+               out_bLoLo := t_rScaled <= (in_rLoLoLimit + in_rAlarmDeadband);
+            ELSE
+               out_bLoLo := t_rScaled <= in_rLoLoLimit;
+            END_IF;
+            IF out_bLo THEN
+               out_bLo := (t_rScaled <= (in_rLoLimit + in_rAlarmDeadband)) AND NOT out_bLoLo;
+            ELSE
+               out_bLo := (t_rScaled <= in_rLoLimit) AND NOT out_bLoLo;
+            END_IF;
+
+         99: // FAULT (wire break or error)
+            out_rEngValue := 0.0;
+
+      ELSE
+         out_wErrorCode := 16#FFFF; out_bError := TRUE; s_nStep := 99;
+      END_CASE;
+
+      IF s_nStep <> s_nStepLast THEN s_nStepLast := s_nStep; END_IF;
+   END_REGION
+
+
+   REGION 03_OUTPUT_LOGIC
+      out_nState := s_nStep;
+   END_REGION
+
+
+   REGION 04_DIAGNOSTICS
+      // s_nErrorCount: total fault events
+   END_REGION
+
+
+END_FUNCTION_BLOCK

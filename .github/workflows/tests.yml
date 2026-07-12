@@ -1,0 +1,43 @@
+name: Regression Tests
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  test:
+    # W-A7: matrix Windows AND Linux. The webgui ships only as a Windows
+    # desktop app (start.bat, pywebview + Edge WebView2, keyring backed by
+    # Windows Credential Manager, pythonnet/TIA Openness only on Windows).
+    # An Ubuntu-only CI cannot catch keyring API drifts (keyring 25.x
+    # changed shapes), pathlib quirks on PowerShell paths with spaces, or
+    # case-insensitive filename collisions.
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: python -m pytest -q --tb=short
+
+      - name: Pre-field smoke — behavioral simulation, not just structural
+        # Drives the real AutoFlowRunner engine end-to-end (read legacy code →
+        # prompt → write SCL → scl_validator) with a mocked AI client, proving
+        # the whole generation chain executes — unlike the regex/structure
+        # checks above. No API key required in mock mode.
+        run: python sim/field_pretest.py --runs 1

@@ -1,0 +1,7 @@
+DATA_BLOCK "iDB_MOT_CONV_002"
+{ S7_Optimized_Access := 'TRUE' }
+"FB_MOTOR_DOL"
+
+BEGIN
+
+END_DATA_BLOCK

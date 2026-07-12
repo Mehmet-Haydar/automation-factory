@@ -1,0 +1,108 @@
+{
+  "_schema_version": "1.0.0",
+  "contract_version": "1.0.0",
+  "block": {
+    "name": "OB_RackFailure_OB86",
+    "version": "1.0.0",
+    "type": "OB",
+    "domain": "ob",
+    "device_type": "OB86",
+    "platform": "S7_1500_TIA_V18+",
+    "source": "Factory",
+    "lifecycle": "DRAFT",
+    "description": "Rack failure OB86. Triggered on loss of rack / DP slave / PROFINET device. Sets global comms fault flag and logs the failing station."
+  },
+  "interface": {
+    "inputs": [],
+    "outputs": [],
+    "in_out": [],
+    "static_vars": []
+  },
+  "constraints": {
+    "mandatory_regions": [
+      "01_READ_EVENT",
+      "02_SET_COMMS_FAULT",
+      "03_LOG_STATION"
+    ],
+    "mandatory_behaviors": [
+      {
+        "id": "B-OB86-001",
+        "description": "OB86 ORGANIZATION_BLOCK declaration",
+        "check_pattern": "ORGANIZATION_BLOCK\\s+\"?OB_RackFailure_OB86\"?|ORGANIZATION_BLOCK\\s+\"?OB86\"?|ORGANIZATION_BLOCK\\s+\"?OB 86\"?",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-OB86-002",
+        "description": "Communication fault flag set",
+        "check_pattern": "02_SET_COMMS_FAULT|CommsFault|comms_fault|COMMS_FAULT|bCommsFault",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-OB86-003",
+        "description": "Station logging region present",
+        "check_pattern": "03_LOG_STATION|LOG_STATION|Log.*Station|station.*log",
+        "severity": "MUST"
+      }
+    ],
+    "forbidden_patterns": [
+      "CURRENT_TIME\\(\\)"
+    ],
+    "error_codes": []
+  },
+  "gate": {
+    "checks": [
+      {
+        "id": "G-01",
+        "type": "structural",
+        "description": "Structural balance",
+        "required": true
+      },
+      {
+        "id": "G-03",
+        "type": "contract_behavior",
+        "description": "MUST behaviors",
+        "required": true
+      },
+      {
+        "id": "G-05",
+        "type": "forbidden_pattern",
+        "description": "No proprietary calls",
+        "required": true
+      },
+      {
+        "id": "G-06",
+        "type": "plcrex",
+        "description": "PLCreX optional",
+        "required": false
+      }
+    ]
+  },
+  "prompt_binding": {
+    "file": "04_AI_PROMPTS/code_gen/ob/PROMPT_OB_RackFailure_OB86.md",
+    "version": "1.0.0",
+    "last_synced": "2026-05-30"
+  },
+  "duplicate_detection": {
+    "alternatives": [
+      "OB_DIAGNOSTIC_OB82"
+    ],
+    "note": "OB86 for rack/DP/PROFINET device loss; OB82 for module-level diagnostics."
+  },
+  "meta": {
+    "source": "factory",
+    "license": "MIT",
+    "safety_class": "STANDARD",
+    "target_platform": "TIA Portal V18+",
+    "compatible_tia": [
+      "V18",
+      "V19"
+    ]
+  },
+  "behaviors": [],
+  "acceptance": {
+    "contract_check": true,
+    "compile_check": true,
+    "sim_test": true,
+    "human_signoff": true
+  }
+}

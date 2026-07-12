@@ -1,0 +1,7 @@
+{
+  "_comment": "STUB — to be filled in per the Sprint plan",
+  "_title": "Project State JSON Schema",
+  "_version": "0.1.0",
+  "_status": "STUB",
+  "_prerequisites": ["GLOBAL_METADATA_SCHEMA.md"]
+}

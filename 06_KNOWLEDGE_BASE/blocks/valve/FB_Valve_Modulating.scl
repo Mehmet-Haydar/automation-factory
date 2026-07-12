@@ -1,0 +1,150 @@
+// ============================================================================
+// FB_VALVE_MODULATING — Continuously Modulating Valve Control
+// Source    : Factory Library
+// Contract  : 06_KNOWLEDGE_BASE/contracts/valve/FB_Valve_Modulating.contract.json
+// Lifecycle : AUTO_VERIFIED_structural | PENDING_TIA_VERIFY
+// ============================================================================
+// ============================================================
+// *** SAFETY NOTICE ***
+// This function block is NOT designed or validated for use in
+// Safety Instrumented Systems (SIS) per IEC 61508 / IEC 62061,
+// or as a safety-related control function per ISO 13849 (PLr).
+// For functional safety applications, use only certified safety
+// hardware or F-CPU safety functions. A qualified safety engineer
+// must review all applications involving process or personnel safety.
+// ============================================================
+
+FUNCTION_BLOCK "FB_VALVE_MODULATING"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 1.0
+
+   VAR_INPUT
+      in_bEnable          : Bool := FALSE;
+      in_bReset           : Bool := FALSE;
+      in_bManualMode      : Bool := FALSE;
+      in_rSetpointPct     : Real := 0.0;
+      in_rFeedbackPct     : Real := 0.0;
+      in_rDeadbandPct     : Real := 2.0;
+      in_rManualSetPct    : Real := 0.0;
+      in_tFeedbackTimeout : Time := T#10S;
+   END_VAR
+
+   VAR_OUTPUT
+      out_rOutputPct  : Real := 0.0;
+      out_rDeviation  : Real := 0.0;
+      out_bAtSetpoint : Bool := FALSE;
+      out_bReady      : Bool := FALSE;
+      out_bError      : Bool := FALSE;
+      out_wErrorCode  : Word := 16#0000;
+      out_nState      : Int  := 0;
+   END_VAR
+
+   VAR
+      s_bResetEdgeMem : Bool := FALSE;
+      s_bResetTrig    : Bool := FALSE;
+      s_nStep         : Int  := 0;
+      s_nStepLast     : Int  := 0;
+      s_tonFeedbackTO : TON;
+      s_nErrorCount   : DInt := 0;
+   END_VAR
+
+   VAR_TEMP
+      t_rSP          : Real;
+      t_rDeviation   : Real;
+   END_VAR
+
+
+BEGIN
+
+   REGION 01_INPUT_VALIDATION
+      s_bResetTrig    := in_bReset AND NOT s_bResetEdgeMem;
+      s_bResetEdgeMem := in_bReset;
+
+      IF s_bResetTrig THEN
+         out_bError := FALSE; out_wErrorCode := 16#0000;
+         IF s_nStep = 99 THEN s_nStep := 0; END_IF;
+      END_IF;
+
+      IF NOT in_bEnable THEN
+         out_rOutputPct := 0.0; out_bReady := FALSE;
+         out_bAtSetpoint := FALSE; s_nStep := 0; RETURN;
+      END_IF;
+
+      // Select setpoint based on mode
+      IF in_bManualMode THEN
+         t_rSP := in_rManualSetPct;
+      ELSE
+         t_rSP := in_rSetpointPct;
+      END_IF;
+
+      // Clamp setpoint 0.0-100.0 and flag if out of range
+      IF t_rSP < 0.0 OR t_rSP > 100.0 THEN
+         IF NOT out_bError THEN
+            out_bError := TRUE; out_wErrorCode := 16#0002;   // 16#0002 = Setpoint out of range
+            s_nErrorCount := s_nErrorCount + 1;
+            s_nStep := 99;   // S-3 fix: fault isolation — stop state machine on error
+         END_IF;
+      END_IF;
+      IF t_rSP < 0.0 THEN t_rSP := 0.0; END_IF;
+      IF t_rSP > 100.0 THEN t_rSP := 100.0; END_IF;
+
+      // Feedback wire-break / overrange check
+      IF in_rFeedbackPct < -5.0 THEN
+         IF NOT out_bError THEN
+            out_bError := TRUE; out_wErrorCode := 16#0001;   // 16#0001 = Wire break / no feedback
+            s_nErrorCount := s_nErrorCount + 1;
+         END_IF;
+         s_nStep := 99;
+      END_IF;
+   END_REGION
+
+
+   REGION 02_STATE_MACHINE
+      CASE s_nStep OF
+
+         0:  // IDLE / CONTROLLING
+            out_bReady := TRUE;
+            s_tonFeedbackTO(IN := FALSE, PT := in_tFeedbackTimeout);
+            s_nStep := 10;   // immediately go to control
+
+         10: // CONTROLLING (continuous)
+            out_rOutputPct := t_rSP;
+            t_rDeviation   := t_rSP - in_rFeedbackPct;
+            out_rDeviation := t_rDeviation;
+
+            // At-setpoint detection with deadband
+            out_bAtSetpoint := ABS(t_rDeviation) <= in_rDeadbandPct;
+
+            // Feedback responsiveness check
+            s_tonFeedbackTO(IN := (ABS(t_rDeviation) > 10.0 * in_rDeadbandPct), PT := in_tFeedbackTimeout);
+            IF s_tonFeedbackTO.Q THEN
+               out_bError := TRUE; out_wErrorCode := 16#0001;   // Not responding
+               s_nErrorCount := s_nErrorCount + 1;
+               s_nStep := 99;
+            END_IF;
+
+            IF NOT in_bEnable THEN s_nStep := 0; END_IF;
+
+         99: // FAULT
+            out_rOutputPct := 0.0; out_bReady := FALSE;
+            out_bAtSetpoint := FALSE;
+
+      ELSE
+         out_wErrorCode := 16#FFFF; out_bError := TRUE; s_nStep := 99;
+      END_CASE;
+
+      IF s_nStep <> s_nStepLast THEN s_nStepLast := s_nStep; END_IF;
+   END_REGION
+
+
+   REGION 03_OUTPUT_LOGIC
+      out_nState := s_nStep;
+   END_REGION
+
+
+   REGION 04_DIAGNOSTICS
+      // s_nErrorCount: total fault events
+   END_REGION
+
+
+END_FUNCTION_BLOCK

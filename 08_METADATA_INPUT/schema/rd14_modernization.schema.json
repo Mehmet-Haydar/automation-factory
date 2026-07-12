@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "rd14_modernization.schema.json",
+  "title": "RD14 — Modernization Report",
+  "description": "Per-project modernization findings + decision matrix. Spec: MDSCHEMA_RAWDATA_14_MODERNIZATION.md",
+  "type": "object",
+  "required": ["project_id", "Findings"],
+  "properties": {
+    "project_id": { "type": "string" },
+    "customer_decision": { "type": "string", "enum": ["RETROFIT", "GREENFIELD", "HYBRID", "PENDING"] },
+    "Findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["FindingID", "Category", "Severity", "Priority", "PLCPlatform", "AntiPattern", "ModernAlternative", "Effort", "Impact", "RetrofitApplicable", "GreenfieldApplicable", "AutoFixable", "VerificationRequired", "Status"],
+        "properties": {
+          "FindingID": { "type": "string", "pattern": "^FND\\d{3}$" },
+          "Category": {
+            "type": "string",
+            "enum": ["NAMING", "STRUCTURE", "SAFETY", "PERFORMANCE", "MAINTAINABILITY", "COMMUNICATION", "HMI", "ALARM", "MOTION", "DATA_MANAGEMENT", "DIAGNOSTICS", "COMPLIANCE", "OBSOLETE_PLATFORM", "REDUNDANCY"]
+          },
+          "Severity": { "type": "string", "enum": ["CRITICAL", "MAJOR", "MINOR", "INFO"] },
+          "Priority": { "type": "integer", "minimum": 1, "maximum": 99 },
+          "PLCPlatform": { "type": "string", "enum": ["S5", "S7_300", "S7_400", "S7_1200", "S7_1500", "AB_L5X", "CODESYS", "Other", "ALL"] },
+          "BlockRef": { "type": "string" },
+          "AnnotationRef": { "type": "string" },
+          "AntiPattern": { "type": "string", "minLength": 20 },
+          "ModernAlternative": { "type": "string", "minLength": 20 },
+          "Effort": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "VERY_HIGH"] },
+          "EffortDetail": { "type": "string" },
+          "Impact": { "type": "string", "enum": ["SAFETY", "RELIABILITY", "MAINTAINABILITY", "PERFORMANCE", "COMPLIANCE", "READABILITY", "MULTIPLE"] },
+          "ImpactDetail": { "type": "string" },
+          "StandardRef": { "type": "string" },
+          "RetrofitApplicable": { "type": "string", "enum": ["YES", "NO", "PARTIAL"] },
+          "GreenfieldApplicable": { "type": "string", "enum": ["YES", "NO"] },
+          "AutoFixable": { "type": "string", "enum": ["YES", "NO", "PARTIAL"] },
+          "AutoFixNote": { "type": "string" },
+          "VerificationRequired": { "type": "string", "enum": ["NONE", "FUNCTIONAL_TEST", "SAFETY_ENGINEER", "CUSTOMER_APPROVAL"] },
+          "VerificationDetail": { "type": "string" },
+          "Notes": { "type": "string" },
+          "Status": { "type": "string", "enum": ["IDENTIFIED", "PLANNED", "IN_PROGRESS", "IMPLEMENTED", "VERIFIED", "DEFERRED", "WONT_FIX"] }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "Category": { "const": "SAFETY" } } },
+            "then": {
+              "properties": {
+                "VerificationRequired": { "not": { "const": "NONE" } }
+              }
+            }
+          },
+          {
+            "if": { "properties": { "Impact": { "const": "MULTIPLE" } } },
+            "then": { "required": ["ImpactDetail"] }
+          },
+          {
+            "if": { "properties": { "AutoFixable": { "not": { "const": "NO" } } } },
+            "then": { "required": ["AutoFixNote"] }
+          }
+        ],
+        "additionalProperties": true
+      }
+    },
+    "ModernizationDecision": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["Option", "Recommendation", "Rationale"],
+        "properties": {
+          "Option": { "type": "string", "enum": ["RETROFIT", "GREENFIELD", "HYBRID"] },
+          "ApplicableFindings": { "type": "integer", "minimum": 0 },
+          "TotalEffort": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "VERY_HIGH"] },
+          "Recommendation": { "type": "string", "enum": ["RECOMMENDED", "ACCEPTABLE", "NOT_RECOMMENDED"] },
+          "Rationale": { "type": "string", "minLength": 20 }
+        }
+      }
+    }
+  }
+}

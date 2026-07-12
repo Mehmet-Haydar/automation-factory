@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "rd03_flowchart.schema.json",
+  "title": "RD03 — Flowchart (SFC)",
+  "description": "Per-project flowchart. Spec: MDSCHEMA_RAWDATA_03_FLOWCHART.md",
+  "type": "object",
+  "required": ["project_id", "Steps"],
+  "properties": {
+    "project_id": { "type": "string" },
+    "Steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["StepID", "StepName", "StepType", "Description", "EntryCondition", "ExitCondition", "Actions", "ISA88Level", "Status"],
+        "properties": {
+          "StepID": { "type": "string", "pattern": "^S\\d{3}[A-Z]?$" },
+          "StepName": { "type": "string", "minLength": 1 },
+          "StepType": { "type": "string", "enum": ["Initial", "Normal", "Alternative", "Parallel", "Final"] },
+          "Description": { "type": "string" },
+          "EntryCondition": { "type": "string", "minLength": 1 },
+          "ExitCondition": { "type": "string" },
+          "Actions": { "type": "string" },
+          "NextStep": { "type": "string" },
+          "ErrorStep": { "type": "string", "pattern": "^(S\\d{3}[A-Z]?|)$" },
+          "TimerRef": { "type": "string" },
+          "ModeReq": { "type": "string" },
+          "ISA88Level": { "type": "string", "enum": ["Phase", "Operation", "Procedure", "UnitProc"] },
+          "Notes": { "type": "string" },
+          "Status": { "type": "string", "enum": ["Active", "Inactive", "Spare"] }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "StepType": { "const": "Initial" } } },
+            "then": {
+              "properties": {
+                "EntryCondition": { "const": "TRUE" }
+              }
+            }
+          }
+        ],
+        "additionalProperties": true
+      }
+    }
+  }
+}

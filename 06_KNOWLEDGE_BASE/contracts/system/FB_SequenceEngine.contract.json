@@ -1,0 +1,285 @@
+{
+  "_schema_version": "1.0.0",
+  "contract_version": "1.0.0",
+  "block": {
+    "name": "FB_SequenceEngine",
+    "version": "1.0.0",
+    "type": "FB",
+    "domain": "system",
+    "device_type": "SequenceEngine",
+    "platform": "S7_1500_TIA_V18+",
+    "source": "Factory",
+    "lifecycle": "DRAFT",
+    "description": "Configurable step sequencer. Up to 16 steps, step-done inputs, step-timeout watchdogs, pause/resume/abort, restart counter."
+  },
+  "interface": {
+    "inputs": [
+      {
+        "name": "in_bEnable",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bReset",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bStart",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bPause",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bAbort",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bStepDone",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true,
+        "description": "Current step completion signal"
+      },
+      {
+        "name": "in_tStepTimeout",
+        "iec_type": "Time",
+        "default": "T#30S",
+        "required": true
+      },
+      {
+        "name": "in_nTotalSteps",
+        "iec_type": "Int",
+        "default": 1,
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "name": "out_nCurrentStep",
+        "iec_type": "Int",
+        "default": 0,
+        "required": true
+      },
+      {
+        "name": "out_bRunning",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bPaused",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bComplete",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bReady",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bError",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_wErrorCode",
+        "iec_type": "Word",
+        "default": "16#0000",
+        "required": true
+      },
+      {
+        "name": "out_nState",
+        "iec_type": "Int",
+        "default": 0,
+        "required": true
+      },
+      {
+        "name": "out_dCycleCount",
+        "iec_type": "DInt",
+        "default": 0,
+        "required": true
+      }
+    ],
+    "in_out": [],
+    "static_vars": [
+      {
+        "name": "s_bResetEdgeMem",
+        "iec_type": "Bool"
+      },
+      {
+        "name": "s_bResetTrig",
+        "iec_type": "Bool"
+      },
+      {
+        "name": "s_nStep",
+        "iec_type": "Int"
+      },
+      {
+        "name": "s_nSequenceStep",
+        "iec_type": "Int"
+      },
+      {
+        "name": "s_tonStepTimeout",
+        "iec_type": "TON"
+      }
+    ]
+  },
+  "constraints": {
+    "mandatory_regions": [
+      "01_INPUT_VALIDATION",
+      "02_STATE_MACHINE",
+      "03_OUTPUT_LOGIC",
+      "04_DIAGNOSTICS"
+    ],
+    "mandatory_behaviors": [
+      {
+        "id": "B-SE-001",
+        "description": "Reset rising edge",
+        "check_pattern": "s_bResetTrig\\s*:=\\s*.*in_bReset.*AND\\s*NOT.*s_bResetEdgeMem",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-SE-002",
+        "description": "Step timeout watchdog present",
+        "check_pattern": "s_tonStepTimeout|StepTimeout|stepTimeout",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-SE-003",
+        "description": "Pause handling present",
+        "check_pattern": "in_bPause|out_bPaused|Pause|PAUSED",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-SE-004",
+        "description": "Abort handling present",
+        "check_pattern": "in_bAbort|Abort|ABORT",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-SE-005",
+        "description": "Cycle count incremented on completion",
+        "check_pattern": "out_dCycleCount|CycleCount|cycleCount",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-SE-006",
+        "description": "Error code 16#0001 present",
+        "check_pattern": "16#0001",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-SE-007",
+        "description": "FB name is FB_SequenceEngine",
+        "check_pattern": "FUNCTION_BLOCK\\s+\"?FB_SequenceEngine\"?",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-SE-008",
+        "description": "Optimized Access declared",
+        "check_pattern": "S7_Optimized_Access\\s*:=\\s*'TRUE'",
+        "severity": "MUST"
+      }
+    ],
+    "forbidden_patterns": [
+      "CURRENT_TIME\\(\\)",
+      "GET_SYSTIME\\(\\)"
+    ],
+    "error_codes": [
+      {
+        "hex": "16#0001",
+        "meaning": "Step timeout — step did not complete within in_tStepTimeout"
+      },
+      {
+        "hex": "16#0002",
+        "meaning": "Abort command during active sequence"
+      }
+    ]
+  },
+  "gate": {
+    "checks": [
+      {
+        "id": "G-01",
+        "type": "structural",
+        "description": "Structural balance",
+        "required": true
+      },
+      {
+        "id": "G-02",
+        "type": "contract_interface",
+        "description": "Required ports",
+        "required": true
+      },
+      {
+        "id": "G-03",
+        "type": "contract_behavior",
+        "description": "MUST behaviors",
+        "required": true
+      },
+      {
+        "id": "G-04",
+        "type": "contract_error_codes",
+        "description": "Error codes in SCL",
+        "required": true
+      },
+      {
+        "id": "G-05",
+        "type": "forbidden_pattern",
+        "description": "No proprietary calls",
+        "required": true
+      },
+      {
+        "id": "G-06",
+        "type": "plcrex",
+        "description": "PLCreX optional",
+        "required": false
+      }
+    ]
+  },
+  "prompt_binding": {
+    "file": "04_AI_PROMPTS/code_gen/PROMPT_CODE_GEN_SEQUENCE.md",
+    "version": "1.0.0",
+    "last_synced": "2026-05-30"
+  },
+  "duplicate_detection": {
+    "alternatives": [],
+    "note": "Generic sequencer engine. Configure in_nTotalSteps and wire in_bStepDone to actual process completion signals in OB1."
+  },
+  "meta": {
+    "source": "factory",
+    "license": "MIT",
+    "safety_class": "STANDARD",
+    "target_platform": "TIA Portal V18+",
+    "compatible_tia": [
+      "V18",
+      "V19"
+    ]
+  },
+  "behaviors": [],
+  "acceptance": {
+    "contract_check": true,
+    "compile_check": true,
+    "sim_test": true,
+    "human_signoff": true
+  }
+}

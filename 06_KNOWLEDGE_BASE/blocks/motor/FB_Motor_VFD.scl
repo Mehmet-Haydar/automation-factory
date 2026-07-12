@@ -1,0 +1,218 @@
+// ============================================================================
+// FB_MOTOR_VFD — Variable Frequency Drive Control (Hardware-Independent)
+// Source    : Factory Library
+// Contract  : 06_KNOWLEDGE_BASE/contracts/motor/FB_Motor_VFD.contract.json
+// Lifecycle : AUTO_VERIFIED_structural | PENDING_TIA_VERIFY
+// Note      : Brand-specific STW/ZSW word mapping done by a thin brand-driver FB.
+// ============================================================================
+// ============================================================
+// *** SAFETY NOTICE ***
+// This function block is NOT designed or validated for use in
+// Safety Instrumented Systems (SIS) per IEC 61508 / IEC 62061,
+// or as a safety-related control function per ISO 13849 (PLr).
+// For functional safety applications, use only certified safety
+// hardware or F-CPU safety functions. A qualified safety engineer
+// must review all applications involving process or personnel safety.
+// ============================================================
+
+FUNCTION_BLOCK "FB_MOTOR_VFD"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 1.0
+
+   VAR_INPUT
+      in_bEnable             : Bool := FALSE;
+      in_bReset              : Bool := FALSE;
+      in_bManualMode         : Bool := FALSE;
+      in_bStartCmd           : Bool := FALSE;
+      in_bStopCmd            : Bool := FALSE;
+      in_bAutoCmd            : Bool := FALSE;   // Automation start command (used in AUTO mode)
+      in_rSetpointHz         : Real := 0.0;
+      in_rMinFreq            : Real := 0.0;
+      in_rMaxFreq            : Real := 50.0;
+      in_rDeviationTolerance : Real := 2.0;
+      in_tDeviationTimeout   : Time := T#5S;
+      in_bFeedbackRun        : Bool := FALSE;
+      in_bFeedbackReady      : Bool := FALSE;
+      in_bFeedbackFault      : Bool := FALSE;
+      in_rFeedbackHz         : Real := 0.0;
+   END_VAR
+
+   VAR_OUTPUT
+      out_bStartCmd  : Bool := FALSE;
+      out_bResetCmd  : Bool := FALSE;
+      out_rSetpointAO: Real := 0.0;
+      out_bReady     : Bool := FALSE;
+      out_bError     : Bool := FALSE;
+      out_wErrorCode : Word := 16#0000;
+      out_nState     : Int  := 0;
+      out_bAtSpeed   : Bool := FALSE;
+      out_rActualHz  : Real := 0.0;
+      out_dRunHours  : DInt := 0;
+   END_VAR
+
+   VAR
+      s_bResetEdgeMem  : Bool := FALSE;
+      s_bResetTrig     : Bool := FALSE;
+      s_nStep          : Int  := 0;
+      s_nStepLast      : Int  := 0;
+      s_bRestartInhibit : Bool := FALSE;   // Inhibit restart after enable rising edge
+      s_bEnableEdgeMem  : Bool := FALSE;   // Edge memory for enable signal
+      s_tonStartTO    : TON;
+      s_tonDeviation  : TON;
+      s_tonRunTick    : TON;                 // 1-second tick for scan-independent run-time counting
+      s_nErrorCount   : DInt := 0;
+   END_VAR
+
+   VAR_TEMP
+      t_rClampedSP   : Real;
+      t_rDeviation   : Real;
+      t_bStartEnable : Bool;
+   END_VAR
+
+
+BEGIN
+
+   REGION 01_INPUT_VALIDATION
+      s_bResetTrig    := in_bReset AND NOT s_bResetEdgeMem;
+      s_bResetEdgeMem := in_bReset;
+
+      // Detect enable rising edge — inhibit restart until operator resets
+      IF in_bEnable AND NOT s_bEnableEdgeMem THEN
+         s_bRestartInhibit := TRUE;
+      END_IF;
+      s_bEnableEdgeMem := in_bEnable;
+      // Clear inhibit on explicit operator reset
+      IF s_bResetTrig THEN
+         s_bRestartInhibit := FALSE;
+      END_IF;
+
+      IF s_bResetTrig THEN
+         out_bError := FALSE; out_wErrorCode := 16#0000;
+         out_bResetCmd := TRUE;
+         IF s_nStep = 99 THEN s_nStep := 0; END_IF;
+      ELSE
+         out_bResetCmd := FALSE;
+      END_IF;
+
+      IF NOT in_bEnable THEN
+         out_bStartCmd := FALSE; out_rSetpointAO := 0.0;
+         out_bReady := FALSE; out_bAtSpeed := FALSE;
+         s_nStep := 0; RETURN;
+      END_IF;
+
+      // Setpoint range validation
+      IF in_rSetpointHz < in_rMinFreq OR in_rSetpointHz > in_rMaxFreq THEN
+         IF NOT out_bError THEN
+            out_bError := TRUE; out_wErrorCode := 16#0010;   // 16#0010 = Setpoint out of range
+            s_nErrorCount := s_nErrorCount + 1;
+         END_IF;
+         s_nStep := 99;
+      END_IF;
+
+      // Clamp setpoint
+      t_rClampedSP := in_rSetpointHz;
+      IF t_rClampedSP < in_rMinFreq THEN t_rClampedSP := in_rMinFreq; END_IF;
+      IF t_rClampedSP > in_rMaxFreq THEN t_rClampedSP := in_rMaxFreq; END_IF;
+
+      IF in_bFeedbackFault THEN
+         out_bStartCmd := FALSE;
+         IF NOT out_bError THEN
+            out_bError := TRUE; out_wErrorCode := 16#0006;   // 16#0006 = Drive fault
+            s_nErrorCount := s_nErrorCount + 1;
+         END_IF;
+         s_nStep := 99;
+      END_IF;
+   END_REGION
+
+
+   REGION 02_STATE_MACHINE
+      IF in_bManualMode THEN
+         t_bStartEnable := in_bStartCmd AND NOT in_bStopCmd;
+      ELSE
+         t_bStartEnable := in_bAutoCmd AND NOT in_bStopCmd;
+      END_IF;
+      out_rActualHz  := in_rFeedbackHz;
+
+      CASE s_nStep OF
+
+         0:  // IDLE
+            out_bReady := TRUE; out_bStartCmd := FALSE;
+            out_rSetpointAO := 0.0; out_bAtSpeed := FALSE;
+            s_tonStartTO(IN := FALSE, PT := in_tDeviationTimeout);
+            s_tonDeviation(IN := FALSE, PT := in_tDeviationTimeout);
+            s_tonRunTick(IN := FALSE, PT := T#1S);
+            IF t_bStartEnable AND NOT out_bError AND NOT s_bRestartInhibit THEN
+               IF NOT in_bFeedbackReady THEN
+                  out_bError := TRUE; out_wErrorCode := 16#0001;   // 16#0001 = Drive not ready
+                  s_nErrorCount := s_nErrorCount + 1;
+                  s_nStep := 99;
+               ELSE
+                  out_bStartCmd := TRUE;
+                  out_rSetpointAO := t_rClampedSP;
+                  s_nStep := 10;
+               END_IF;
+            END_IF;
+
+         10: // ACCELERATING
+            out_bReady := FALSE; out_bStartCmd := TRUE;
+            out_rSetpointAO := t_rClampedSP;
+            t_rDeviation := ABS(in_rFeedbackHz - t_rClampedSP);
+            s_tonDeviation(IN := (t_rDeviation > in_rDeviationTolerance), PT := in_tDeviationTimeout);
+            IF t_rDeviation <= in_rDeviationTolerance THEN
+               out_bAtSpeed := TRUE;
+               s_tonDeviation(IN := FALSE, PT := in_tDeviationTimeout);
+               s_nStep := 20;
+            END_IF;
+            IF s_tonDeviation.Q THEN
+               out_bError := TRUE; out_wErrorCode := 16#0011;   // 16#0011 = Speed deviation
+               s_nErrorCount := s_nErrorCount + 1;
+               s_nStep := 99;
+            END_IF;
+
+         20: // AT SPEED
+            out_bStartCmd := TRUE; out_rSetpointAO := t_rClampedSP;
+            // Run-seconds counter: TON-based — scan-cycle independent
+            s_tonRunTick(IN := TRUE, PT := T#1S);
+            IF s_tonRunTick.Q THEN
+               out_dRunHours := out_dRunHours + 1;
+               s_tonRunTick(IN := FALSE, PT := T#1S);
+            END_IF;
+            t_rDeviation := ABS(in_rFeedbackHz - t_rClampedSP);
+            IF t_rDeviation > in_rDeviationTolerance THEN
+               s_tonDeviation(IN := TRUE, PT := in_tDeviationTimeout);
+               IF s_tonDeviation.Q THEN
+                  out_bError := TRUE; out_wErrorCode := 16#0011;
+                  s_nErrorCount := s_nErrorCount + 1;
+                  s_nStep := 99;
+               END_IF;
+            ELSE
+               s_tonDeviation(IN := FALSE, PT := in_tDeviationTimeout);
+            END_IF;
+            IF NOT t_bStartEnable THEN
+               out_bStartCmd := FALSE; out_rSetpointAO := 0.0;
+               out_bAtSpeed := FALSE; s_nStep := 0;
+            END_IF;
+
+         99: // FAULT
+            out_bStartCmd := FALSE; out_rSetpointAO := 0.0;
+            out_bReady := FALSE; out_bAtSpeed := FALSE;
+
+      ELSE
+         out_wErrorCode := 16#FFFF; out_bError := TRUE; s_nStep := 99;
+      END_CASE;
+
+      IF s_nStep <> s_nStepLast THEN s_nStepLast := s_nStep; END_IF;
+   END_REGION
+
+
+   REGION 03_OUTPUT_LOGIC
+      out_nState := s_nStep;
+   END_REGION
+
+
+   REGION 04_DIAGNOSTICS
+      // s_nErrorCount: total fault events for HMI
+   END_REGION
+
+
+END_FUNCTION_BLOCK

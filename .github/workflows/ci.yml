@@ -1,0 +1,92 @@
+name: CI — Gate Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# pytest is handled by the existing "Regression Tests" workflow (tests.yml)
+# which runs a Windows+Linux matrix. This workflow only runs the SCL
+# acceptance gate — a fast, dependency-free check that all 18 blocks PASS.
+
+jobs:
+  doc-staleness:
+    # S-7 (2026-07-10 audit): ~150 MDs carry a hand-maintained
+    # last_validated date. Warn (never fail) when a file's content moved
+    # on after its recorded validation month.
+    name: last_validated staleness (warn-only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # the check compares against git commit dates
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Check last_validated vs last commit month
+        run: python 05_SCRIPTS/dev/script_last_validated_check.py --gha
+
+  gate:
+    name: acceptance gate (all SCL blocks)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install gate deps
+        run: pip install --upgrade pip pyyaml
+
+      - name: Run acceptance gate on all blocks
+        run: |
+          python -c "
+          import pathlib, subprocess, sys
+
+          KB = pathlib.Path('06_KNOWLEDGE_BASE')
+          pairs = [
+              ('blocks/motor/FB_Motor_DOL.scl',        'contracts/motor/FB_Motor_DOL.contract.json'),
+              ('blocks/motor/FB_Motor_Standard.scl',   'contracts/motor/FB_Motor_DOL.contract.json'),
+              ('blocks/motor/FB_Motor_SoftStarter.scl','contracts/motor/FB_Motor_SoftStarter.contract.json'),
+              ('blocks/motor/FB_Motor_StarDelta.scl',  'contracts/motor/FB_Motor_StarDelta.contract.json'),
+              ('blocks/motor/FB_Motor_VFD.scl',        'contracts/motor/FB_Motor_VFD.contract.json'),
+              ('blocks/ob/OB_Diagnostic_OB82.scl',     'contracts/ob/OB_Diagnostic_OB82.contract.json'),
+              ('blocks/ob/OB_Main_OB1.scl',            'contracts/ob/OB_Main_OB1.contract.json'),
+              ('blocks/ob/OB_RackFailure_OB86.scl',    'contracts/ob/OB_RackFailure_OB86.contract.json'),
+              ('blocks/ob/OB_Startup_OB100.scl',       'contracts/ob/OB_Startup_OB100.contract.json'),
+              ('blocks/process/FB_AlarmHandler.scl',   'contracts/process/FB_AlarmHandler.contract.json'),
+              ('blocks/process/FB_AnalogScale.scl',    'contracts/process/FB_AnalogScale.contract.json'),
+              ('blocks/process/FB_PID_Wrapper.scl',    'contracts/process/FB_PID_Wrapper.contract.json'),
+              ('blocks/system/FB_ModeManager.scl',     'contracts/system/FB_ModeManager.contract.json'),
+              ('blocks/system/FB_SequenceEngine.scl',  'contracts/system/FB_SequenceEngine.contract.json'),
+              ('blocks/system/FB_Watchdog.scl',        'contracts/system/FB_Watchdog.contract.json'),
+              ('blocks/valve/FB_Valve_3Way.scl',       'contracts/valve/FB_Valve_3Way.contract.json'),
+              ('blocks/valve/FB_Valve_Modulating.scl', 'contracts/valve/FB_Valve_Modulating.contract.json'),
+              ('blocks/valve/FB_Valve_OnOff.scl',      'contracts/valve/FB_Valve_OnOff.contract.json'),
+          ]
+          failed = []
+          for scl_rel, contract_rel in pairs:
+              r = subprocess.run(
+                  [sys.executable, '05_SCRIPTS/accept_gate.py',
+                   str(KB / scl_rel), '--contract', str(KB / contract_rel)],
+                  capture_output=True
+              )
+              name = pathlib.Path(scl_rel).stem
+              status = 'PASS' if r.returncode == 0 else 'FAIL'
+              print(f'  [{status}] {name}')
+              if r.returncode != 0:
+                  failed.append(name)
+                  print(r.stdout.decode(errors='replace'))
+          if failed:
+              print(f'GATE FAILED: {failed}')
+              sys.exit(1)
+          print(f'All {len(pairs)} blocks PASS')
+          "

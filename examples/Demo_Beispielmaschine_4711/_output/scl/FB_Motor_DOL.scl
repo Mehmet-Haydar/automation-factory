@@ -1,0 +1,275 @@
+// ============================================================================
+// FB_MOTOR_DOL — Direct-On-Line Motor Control
+// ============================================================================
+// Source    : Factory Library (AUTOMATION_FACTORY v3.1.0+)
+// Contract  : 06_KNOWLEDGE_BASE/contracts/motor/FB_Motor_DOL.contract.json
+// Template  : 01_GLOBAL_STANDARDS/templates/GLOBAL_FB_TEMPLATE.scl
+// Platform  : TIA Portal V18+  (S7-1500)
+// Version   : 1.0.0
+// Lifecycle : AUTO_VERIFIED_structural | PENDING_TIA_VERIFY
+// Gate      : AGENT_TEAM/gate_results/FB_Motor_DOL_gate.json
+//
+// Purpose:
+//   Single-contactor DOL motor control.
+//   Includes: run-feedback watchdog, welded-contactor detection,
+//   overload protection, rising-edge reset, optional reversing ports.
+//
+// PENDING_TIA_VERIFY:
+//   Structural gate passed. Siemens TIA Portal compile + PLCSIM run
+//   has NOT been performed. Human engineer must verify before production use.
+// ============================================================================
+// ============================================================
+// *** SAFETY NOTICE ***
+// This function block is NOT designed or validated for use in
+// Safety Instrumented Systems (SIS) per IEC 61508 / IEC 62061,
+// or as a safety-related control function per ISO 13849 (PLr).
+// For functional safety applications, use only certified safety
+// hardware or F-CPU safety functions. A qualified safety engineer
+// must review all applications involving process or personnel safety.
+// ============================================================
+
+FUNCTION_BLOCK "FB_MOTOR_DOL"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 1.0
+
+   VAR_INPUT
+      in_bEnable          : Bool := FALSE;   // FB enable
+      in_bReset           : Bool := FALSE;   // Fault reset (rising edge)
+      in_bManualMode      : Bool := FALSE;   // TRUE = manual mode
+      in_bStartCmd        : Bool := FALSE;   // Auto start command
+      in_bStopCmd         : Bool := FALSE;   // Auto stop command
+      in_bManualStart     : Bool := FALSE;   // Manual start
+      in_bManualStop      : Bool := FALSE;   // Manual stop
+      in_bFeedbackRun     : Bool := FALSE;   // Run feedback from contactor aux
+      in_bFeedbackOverload: Bool := FALSE;   // Overload / thermal relay (TRUE = fault)
+      in_tStartTimeout    : Time := T#2S;    // Max wait for run feedback after start
+      in_tStopTimeout     : Time := T#2S;    // Max wait for feedback to drop after stop
+      in_tFbkDebounce     : Time := T#200MS; // Debounce for RUNNING feedback loss
+   END_VAR
+
+   VAR_OUTPUT
+      out_bMotorRun   : Bool := FALSE;       // Forward run output to contactor coil
+      out_bReady      : Bool := FALSE;       // FB ready (no fault, enabled)
+      out_bError      : Bool := FALSE;       // Fault active
+      out_wErrorCode  : Word := 16#0000;     // Active fault code
+      out_nState      : Int  := 0;           // Current state machine step
+      out_dRunHours   : DInt := 0;           // Total operating seconds counter
+      out_nErrorCount : DInt := 0;           // Total fault event count (HMI / historian)
+   END_VAR
+
+   VAR
+      s_bResetEdgeMem : Bool := FALSE;       // Rising-edge memory for reset
+      s_bResetTrig    : Bool := FALSE;       // Rising-edge trigger (one-shot)
+      s_nStep         : Int  := 0;           // State machine current step
+      s_nStepLast     : Int  := 0;           // State machine previous step
+      s_tonStartTO    : TON;                 // Start feedback watchdog
+      s_tonStopTO     : TON;                 // Stop feedback watchdog (welded-contactor)
+      s_tonRunTick    : TON;                 // 1-second tick for scan-independent run-time counting
+      s_tonFbkDebounce: TON;                 // Debounce timer for RUNNING feedback loss
+      s_dRunSecs      : DInt := 0;           // Internal seconds counter
+      s_nErrorCount       : DInt := 0;           // Total error events
+      s_bRestartInhibit   : Bool := FALSE;       // Inhibit restart after enable rising edge
+      s_bEnableEdgeMem    : Bool := FALSE;       // Edge memory for enable signal
+   END_VAR
+
+   VAR_TEMP
+      t_bStartEnable  : Bool;               // Derived start permission
+      t_bAnyError     : Bool;               // Temp: any error this scan
+   END_VAR
+
+
+BEGIN
+
+   //=============================================================================
+   // REGION: 01_INPUT_VALIDATION
+   // Rising-edge reset detection. Disable logic if FB not enabled.
+   //=============================================================================
+   REGION 01_INPUT_VALIDATION
+
+      // Detect enable rising edge — inhibit restart until operator resets
+      IF in_bEnable AND NOT s_bEnableEdgeMem THEN
+          s_bRestartInhibit := TRUE;
+      END_IF;
+      s_bEnableEdgeMem := in_bEnable;
+      IF s_bResetTrig THEN
+          s_bRestartInhibit := FALSE;
+      END_IF;
+
+      // Rising-edge reset (MUST: level-triggered reset is forbidden)
+      s_bResetTrig    := in_bReset AND NOT s_bResetEdgeMem;
+      s_bResetEdgeMem := in_bReset;
+
+      // Reset clears fault state
+      IF s_bResetTrig THEN
+         out_bError     := FALSE;
+         out_wErrorCode := 16#0000;
+         IF s_nStep = 99 THEN
+            s_nStep := 0;
+         END_IF;
+      END_IF;
+
+      // FB disabled: force idle
+      IF NOT in_bEnable THEN
+         s_nStep        := 0;
+         out_bMotorRun  := FALSE;
+         out_bReady     := FALSE;
+         RETURN;
+      END_IF;
+
+      // Overload check: immediate stop + fault regardless of state
+      IF in_bFeedbackOverload THEN
+         out_bMotorRun  := FALSE;
+         IF NOT out_bError THEN
+            out_bError     := TRUE;
+            out_wErrorCode := 16#0003;   // 16#0003 = Overload triggered
+            s_nErrorCount  := s_nErrorCount + 1;
+         END_IF;
+         s_nStep := 99;
+      END_IF;
+
+   END_REGION
+
+
+   //=============================================================================
+   // REGION: 02_STATE_MACHINE
+   // States: 0=IDLE, 10=STARTING, 20=RUNNING, 30=STOPPING, 99=FAULT
+   //=============================================================================
+   REGION 02_STATE_MACHINE
+
+      // Manual/Auto conflict detection
+      IF in_bManualMode AND in_bStartCmd THEN
+         out_bError     := TRUE;
+         out_wErrorCode := 16#0004;   // 16#0004 = Manual/Auto mode conflict
+         s_nErrorCount  := s_nErrorCount + 1;
+         s_nStep        := 99;
+      END_IF;
+
+      // Derived start permission (auto or manual)
+      IF in_bManualMode THEN
+         t_bStartEnable := in_bManualStart AND NOT in_bManualStop;
+      ELSE
+         t_bStartEnable := in_bStartCmd AND NOT in_bStopCmd;
+      END_IF;
+
+      CASE s_nStep OF
+
+         0:  // IDLE — waiting for start command
+            out_bReady    := TRUE;
+            out_bMotorRun := FALSE;
+            s_tonStartTO(IN := FALSE, PT := in_tStartTimeout);
+            s_tonStopTO(IN  := FALSE, PT := in_tStopTimeout);
+            s_tonRunTick(IN := FALSE, PT := T#1S);
+            IF t_bStartEnable AND NOT out_bError AND NOT s_bRestartInhibit THEN
+               s_nStep := 10;
+            END_IF;
+
+         10: // STARTING — contactor energized, waiting for feedback
+            out_bMotorRun := TRUE;
+            s_tonStartTO(IN := TRUE, PT := in_tStartTimeout);
+
+            IF in_bFeedbackRun THEN
+               s_nStep := 20;   // Feedback arrived — running
+            END_IF;
+
+            IF s_tonStartTO.Q THEN
+               // No feedback within timeout
+               out_bMotorRun  := FALSE;
+               out_bError     := TRUE;
+               out_wErrorCode := 16#0001;   // 16#0001 = No run feedback within timeout
+               s_nErrorCount  := s_nErrorCount + 1;
+               s_nStep        := 99;
+            END_IF;
+
+         20: // RUNNING
+            out_bMotorRun := TRUE;
+            out_bReady    := FALSE;
+            s_tonStartTO(IN := FALSE, PT := in_tStartTimeout);
+
+            // Run-seconds counter: TON-based — scan-cycle independent
+            s_tonRunTick(IN := TRUE, PT := T#1S);
+            IF s_tonRunTick.Q THEN
+               s_dRunSecs    := s_dRunSecs + 1;
+               out_dRunHours := s_dRunSecs;
+               s_tonRunTick(IN := FALSE, PT := T#1S);
+            END_IF;
+
+            IF NOT t_bStartEnable THEN
+               s_tonFbkDebounce(IN := FALSE, PT := in_tFbkDebounce);
+               s_nStep := 30;   // Stop requested
+            END_IF;
+
+            // Debounced feedback loss check — prevents nuisance trips from contact chatter
+            IF s_nStep = 20 THEN
+               s_tonFbkDebounce(IN := NOT in_bFeedbackRun, PT := in_tFbkDebounce);
+               IF s_tonFbkDebounce.Q THEN
+                  out_bMotorRun  := FALSE;
+                  out_bError     := TRUE;
+                  out_wErrorCode := 16#0006;   // 16#0006 = Feedback anomaly
+                  s_nErrorCount  := s_nErrorCount + 1;
+                  s_nStep        := 99;
+               END_IF;
+            END_IF;
+
+         30: // STOPPING — de-energized, waiting for feedback to drop
+            out_bMotorRun := FALSE;
+            s_tonStopTO(IN := TRUE, PT := in_tStopTimeout);
+
+            IF NOT in_bFeedbackRun THEN
+               // Feedback dropped correctly
+               s_nStep := 0;
+               s_tonStopTO(IN := FALSE, PT := in_tStopTimeout);
+            END_IF;
+
+            IF s_tonStopTO.Q THEN
+               // Feedback still on after timeout — welded contactor
+               out_bError     := TRUE;
+               out_wErrorCode := 16#0002;   // 16#0002 = Welded contactor (feedback stuck)
+               s_nErrorCount  := s_nErrorCount + 1;
+               s_nStep        := 99;
+            END_IF;
+
+         99: // FAULT — waiting for reset
+            out_bMotorRun := FALSE;
+            out_bReady    := FALSE;
+            s_tonStartTO(IN := FALSE, PT := in_tStartTimeout);
+            s_tonStopTO(IN  := FALSE, PT := in_tStopTimeout);
+            // Exit via s_bResetTrig in 01_INPUT_VALIDATION
+
+      ELSE
+         out_wErrorCode := 16#FFFF;
+         out_bError     := TRUE;
+         s_nStep        := 99;
+      END_CASE;
+
+      // Step transition tracking
+      IF s_nStep <> s_nStepLast THEN
+         s_nStepLast := s_nStep;
+      END_IF;
+
+   END_REGION
+
+
+   //=============================================================================
+   // REGION: 03_OUTPUT_LOGIC
+   // Compute final output values from state machine.
+   //=============================================================================
+   REGION 03_OUTPUT_LOGIC
+
+      out_nState := s_nStep;
+
+   END_REGION
+
+
+   //=============================================================================
+   // REGION: 04_DIAGNOSTICS
+   // Track fault events for HMI / historian.
+   //=============================================================================
+   REGION 04_DIAGNOSTICS
+
+      t_bAnyError     := out_bError;
+      out_nErrorCount := s_nErrorCount;
+
+   END_REGION
+
+
+END_FUNCTION_BLOCK

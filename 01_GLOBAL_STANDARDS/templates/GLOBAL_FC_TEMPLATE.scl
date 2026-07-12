@@ -1,0 +1,26 @@
+(*
+================================================================================
+  GLOBAL_FC_TEMPLATE.scl
+  Title          : Global FC Template (SCL)
+  Version        : 0.1.0
+  Last validated : 2026-05
+  Status         : STUB
+  Applies to     : both
+  Prerequisites  : GLOBAL_NAMING_STANDARD.md
+================================================================================
+*)
+
+(* TODO: This file will be filled in per the Sprint plan.
+
+Will include:
+FUNCTION (stateless) skeleton:
+  - Header
+  - VAR_INPUT, VAR_OUTPUT, VAR_TEMP (no static!)
+  - Body: Pure function, no side effects
+  - Return value
+Typical usage: scaling (FC_SCALE_AI), bit manipulation (FC_PACK_BOOL_TO_WORD).
+
+To fill in, open a new chat:
+  - Paste PROJECT_VISION.md, SKELETON_BLUEPRINT.md, PROGRESS_TRACKER.md
+  - Open this file, fill in the content
+*)

@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "rd06_motion.schema.json",
+  "title": "RD06 — Motion System",
+  "description": "Per-project motion/drive axes. Spec: MDSCHEMA_RAWDATA_06_MOTION.md",
+  "type": "object",
+  "required": ["project_id", "Axes"],
+  "properties": {
+    "project_id": { "type": "string" },
+    "Axes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["AxisID", "AxisName", "DriveType", "EngUnit", "HomeMethod", "Status"],
+        "properties": {
+          "AxisID": { "type": "string", "pattern": "^AX\\d{3}$" },
+          "AxisName": { "type": "string", "minLength": 1 },
+          "DriveType": {
+            "type": "string",
+            "enum": ["VFD_Analog", "VFD_Profidrive", "Servo_Profidrive", "Servo_EtherCAT", "Stepper", "Other"]
+          },
+          "DriveModel": { "type": "string" },
+          "Motor_Tag": { "type": "string" },
+          "Feedback_Tag": { "type": "string" },
+          "MaxVelocity": { "type": ["number", "string"] },
+          "MaxAcceleration": { "type": ["number", "string"] },
+          "MaxDeceleration": { "type": ["number", "string"] },
+          "EngUnit": {
+            "type": "string",
+            "enum": ["rpm", "m/s", "mm/s", "deg/s", "mm", "deg", "m"]
+          },
+          "TorqueLimit_pct": { "type": ["number", "string"] },
+          "HomeMethod": {
+            "type": "string",
+            "enum": ["LimitSwitch", "IndexPulse", "AbsEncoder", "Mechanical", "Manual", "None"]
+          },
+          "HomePosition": { "type": ["number", "string"] },
+          "SoftLimit_Neg": { "type": ["number", "string"] },
+          "SoftLimit_Pos": { "type": ["number", "string"] },
+          "DriveDB": { "type": "string" },
+          "PLCopenFBs": { "type": "string" },
+          "Notes": { "type": "string" },
+          "Status": { "type": "string", "enum": ["Active", "Inactive", "Spare"] }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

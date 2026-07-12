@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "rd10_fbspec.schema.json",
+  "title": "RD10 — FB Spec (two sheets)",
+  "description": "Per-project FB/FC inventory + parameters. Spec: MDSCHEMA_RAWDATA_10_FBSPEC.md",
+  "type": "object",
+  "required": ["project_id", "BlockList", "ParamList"],
+  "properties": {
+    "project_id": { "type": "string" },
+    "BlockList": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["BlockName", "BlockType", "Version", "Description", "Status"],
+        "properties": {
+          "BlockName": { "type": "string", "pattern": "^(FB|FC)_[A-Z][A-Za-z0-9_]+$" },
+          "BlockType": { "type": "string", "enum": ["FB", "FC"] },
+          "Version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+          "Description": { "type": "string", "minLength": 1 },
+          "CalledFrom": { "type": "string" },
+          "InstanceDB": { "type": "string" },
+          "LinkedEquipment": { "type": "string" },
+          "TemplateBase": { "type": "string" },
+          "Notes": { "type": "string" },
+          "Status": { "type": "string", "enum": ["Active", "Inactive", "Spare"] }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "BlockType": { "const": "FB" } } },
+            "then": {
+              "required": ["InstanceDB"],
+              "properties": {
+                "InstanceDB": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        ],
+        "additionalProperties": true
+      }
+    },
+    "ParamList": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["BlockName", "ParamName", "Section", "Type", "Description"],
+        "properties": {
+          "BlockName": { "type": "string", "pattern": "^(FB|FC)_[A-Z][A-Za-z0-9_]+$" },
+          "ParamName": { "type": "string", "pattern": "^(in|out|inout|stat|temp)_[a-z][A-Za-z0-9]+$" },
+          "Section": { "type": "string", "enum": ["IN", "OUT", "INOUT", "STAT", "TEMP"] },
+          "Type": { "type": "string", "minLength": 1 },
+          "DefaultValue": { "type": ["string", "number", "boolean"] },
+          "Description": { "type": "string", "minLength": 1 },
+          "LinkedTag": { "type": "string" },
+          "Notes": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

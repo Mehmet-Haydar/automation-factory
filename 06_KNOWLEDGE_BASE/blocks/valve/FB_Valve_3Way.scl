@@ -1,0 +1,178 @@
+// ============================================================================
+// FB_VALVE_3WAY — 3-Way Diverter Valve Control
+// Source    : Factory Library
+// Contract  : 06_KNOWLEDGE_BASE/contracts/valve/FB_Valve_3Way.contract.json
+// Lifecycle : AUTO_VERIFIED_structural | PENDING_TIA_VERIFY
+// ============================================================================
+// ============================================================
+// *** SAFETY NOTICE ***
+// This function block is NOT designed or validated for use in
+// Safety Instrumented Systems (SIS) per IEC 61508 / IEC 62061,
+// or as a safety-related control function per ISO 13849 (PLr).
+// For functional safety applications, use only certified safety
+// hardware or F-CPU safety functions. A qualified safety engineer
+// must review all applications involving process or personnel safety.
+// ============================================================
+
+FUNCTION_BLOCK "FB_VALVE_3WAY"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 1.0
+
+   VAR_INPUT
+      in_bEnable              : Bool := FALSE;
+      in_bReset               : Bool := FALSE;
+      in_bManualMode          : Bool := FALSE;
+      in_bPositionACmd        : Bool := FALSE;   // Manual position-A command (HMI / manual mode)
+      in_bPositionBCmd        : Bool := FALSE;   // Manual position-B command (HMI / manual mode)
+      in_bAutoPositionACmd    : Bool := FALSE;   // Automatic position-A command (sequence / interlock)
+      in_bAutoPositionBCmd    : Bool := FALSE;   // Automatic position-B command (sequence / interlock)
+      in_bFeedbackPositionA   : Bool := FALSE;
+      in_bFeedbackPositionB   : Bool := FALSE;
+      in_tPositionTimeout     : Time := T#5S;
+      in_bSpringReturn        : Bool := TRUE;    // TRUE = spring-return solenoid (outputs forced FALSE on idle/fault); FALSE = bistable/energy-maintained (outputs retain last state)
+   END_VAR
+
+   VAR_OUTPUT
+      out_bOutputA    : Bool := FALSE;
+      out_bOutputB    : Bool := FALSE;
+      out_bReadyA     : Bool := FALSE;
+      out_bReadyB     : Bool := FALSE;
+      out_bReady      : Bool := FALSE;
+      out_bError      : Bool := FALSE;
+      out_wErrorCode  : Word := 16#0000;
+      out_nState      : Int  := 0;
+   END_VAR
+
+   VAR
+      s_bResetEdgeMem : Bool := FALSE;
+      s_bResetTrig    : Bool := FALSE;
+      s_nStep         : Int  := 0;
+      s_nStepLast     : Int  := 0;
+      s_tonPositionTO : TON;
+      s_nErrorCount   : DInt := 0;
+   END_VAR
+
+   VAR_TEMP
+      t_bPositionACmd : Bool;   // Effective position-A command after manual/auto routing
+      t_bPositionBCmd : Bool;   // Effective position-B command after manual/auto routing
+   END_VAR
+
+
+BEGIN
+
+   REGION 01_INPUT_VALIDATION
+      s_bResetTrig    := in_bReset AND NOT s_bResetEdgeMem;
+      s_bResetEdgeMem := in_bReset;
+
+      IF s_bResetTrig THEN
+         out_bError := FALSE; out_wErrorCode := 16#0000;
+         IF s_nStep = 99 THEN s_nStep := 0; END_IF;
+      END_IF;
+
+      IF NOT in_bEnable THEN
+         out_bOutputA := FALSE; out_bOutputB := FALSE;
+         out_bReady := FALSE; s_nStep := 0; RETURN;
+      END_IF;
+
+      // Mutual exclusion: A and B output cannot both be TRUE (interlock)
+      IF out_bOutputA AND out_bOutputB THEN
+         out_bOutputA := FALSE; out_bOutputB := FALSE;
+         IF NOT out_bError THEN
+            out_bError := TRUE; out_wErrorCode := 16#0003;   // 16#0003 = A+B overlap
+            s_nErrorCount := s_nErrorCount + 1;
+         END_IF;
+         s_nStep := 99;
+      END_IF;
+
+      // Both feedback active simultaneously
+      IF in_bFeedbackPositionA AND in_bFeedbackPositionB THEN
+         out_bOutputA := FALSE; out_bOutputB := FALSE;
+         IF NOT out_bError THEN
+            out_bError := TRUE; out_wErrorCode := 16#0003;
+            s_nErrorCount := s_nErrorCount + 1;
+         END_IF;
+         s_nStep := 99;
+      END_IF;
+   END_REGION
+
+
+   REGION 02_STATE_MACHINE
+      // Manual/Auto command routing (FIX S-1: in_bManualMode implemented)
+      IF in_bManualMode THEN
+         t_bPositionACmd := in_bPositionACmd;   // Direct HMI command in manual mode
+         t_bPositionBCmd := in_bPositionBCmd;
+      ELSE
+         t_bPositionACmd := in_bAutoPositionACmd;
+         t_bPositionBCmd := in_bAutoPositionBCmd;
+      END_IF;
+
+      CASE s_nStep OF
+
+         0:  // IDLE
+            IF in_bSpringReturn THEN
+               out_bOutputA := FALSE;   // Spring drives valve to safe position
+               out_bOutputB := FALSE;
+            END_IF;
+            // If bistable (in_bSpringReturn = FALSE): outputs retain last commanded state
+            out_bReady := TRUE;
+            s_tonPositionTO(IN := FALSE, PT := in_tPositionTimeout);
+            out_bReadyA := in_bFeedbackPositionA;
+            out_bReadyB := in_bFeedbackPositionB;
+            IF t_bPositionACmd AND NOT t_bPositionBCmd AND NOT out_bError THEN s_nStep := 10; END_IF;
+            IF t_bPositionBCmd AND NOT t_bPositionACmd AND NOT out_bError THEN s_nStep := 20; END_IF;
+
+         10: // MOVING TO POSITION A
+            out_bOutputA := TRUE; out_bOutputB := FALSE;
+            s_tonPositionTO(IN := NOT in_bFeedbackPositionA, PT := in_tPositionTimeout);
+            IF in_bFeedbackPositionA THEN
+               s_tonPositionTO(IN := FALSE, PT := in_tPositionTimeout);
+               out_bReadyA := TRUE; s_nStep := 0;
+            END_IF;
+            IF s_tonPositionTO.Q THEN
+               out_bOutputA := FALSE;
+               out_bError := TRUE; out_wErrorCode := 16#0001;   // 16#0001 = No position A feedback
+               s_nErrorCount := s_nErrorCount + 1;
+               s_nStep := 99;
+            END_IF;
+
+         20: // MOVING TO POSITION B
+            out_bOutputA := FALSE; out_bOutputB := TRUE;
+            s_tonPositionTO(IN := NOT in_bFeedbackPositionB, PT := in_tPositionTimeout);
+            IF in_bFeedbackPositionB THEN
+               s_tonPositionTO(IN := FALSE, PT := in_tPositionTimeout);
+               out_bReadyB := TRUE; s_nStep := 0;
+            END_IF;
+            IF s_tonPositionTO.Q THEN
+               out_bOutputB := FALSE;
+               out_bError := TRUE; out_wErrorCode := 16#0002;   // 16#0002 = No position B feedback
+               s_nErrorCount := s_nErrorCount + 1;
+               s_nStep := 99;
+            END_IF;
+
+         99: // FAULT
+            IF in_bSpringReturn THEN
+               out_bOutputA := FALSE;   // Spring drives valve to safe position
+               out_bOutputB := FALSE;
+            END_IF;
+            // If bistable (in_bSpringReturn = FALSE): outputs retain last commanded state
+            out_bReady := FALSE;
+
+      ELSE
+         out_wErrorCode := 16#FFFF; out_bError := TRUE; s_nStep := 99;
+      END_CASE;
+
+      IF s_nStep <> s_nStepLast THEN s_nStepLast := s_nStep; END_IF;
+   END_REGION
+
+
+   REGION 03_OUTPUT_LOGIC
+      out_nState := s_nStep;
+   END_REGION
+
+
+   REGION 04_DIAGNOSTICS
+      // s_nErrorCount: total fault events
+   END_REGION
+
+
+END_FUNCTION_BLOCK

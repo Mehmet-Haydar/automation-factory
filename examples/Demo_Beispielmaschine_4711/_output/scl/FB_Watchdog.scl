@@ -1,0 +1,131 @@
+// ============================================================================
+// FB_WATCHDOG — Software Watchdog (Heartbeat Monitor)
+// Source    : Factory Library
+// Contract  : 06_KNOWLEDGE_BASE/contracts/system/FB_Watchdog.contract.json
+// Lifecycle : AUTO_VERIFIED_structural | PENDING_TIA_VERIFY
+// ============================================================================
+// ============================================================
+// *** SAFETY NOTICE ***
+// This function block is NOT designed or validated for use in
+// Safety Instrumented Systems (SIS) per IEC 61508 / IEC 62061,
+// or as a safety-related control function per ISO 13849 (PLr).
+// For functional safety applications, use only certified safety
+// hardware or F-CPU safety functions. A qualified safety engineer
+// must review all applications involving process or personnel safety.
+// ============================================================
+
+FUNCTION_BLOCK "FB_WATCHDOG"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 1.0
+
+   VAR_INPUT
+      in_bEnable       : Bool := FALSE;
+      in_bReset        : Bool := FALSE;
+      in_bHeartbeat    : Bool := FALSE;
+      in_tTimeout      : Time := T#1S;
+      in_bMonitorComms : Bool := FALSE;
+   END_VAR
+
+   VAR_OUTPUT
+      out_bAlive        : Bool := FALSE;
+      out_bFault        : Bool := FALSE;
+      out_wErrorCode    : Word := 16#0000;
+      out_nState        : Int  := 0;
+      out_dTimeoutCount : DInt := 0;
+   END_VAR
+
+   VAR
+      s_bResetEdgeMem     : Bool := FALSE;
+      s_bResetTrig        : Bool := FALSE;
+      s_bHeartbeatLastMem : Bool := FALSE;   // Rising-edge memory for heartbeat
+      s_nStep             : Int  := 0;
+      s_nStepLast         : Int  := 0;
+      s_tonTimeout        : TON;
+      s_nErrorCount       : DInt := 0;
+   END_VAR
+
+   VAR_TEMP
+      t_bHeartbeatEdge : Bool;
+   END_VAR
+
+
+BEGIN
+
+   REGION 01_INPUT_VALIDATION
+      s_bResetTrig    := in_bReset AND NOT s_bResetEdgeMem;
+      s_bResetEdgeMem := in_bReset;
+
+      IF s_bResetTrig THEN
+         out_bFault := FALSE; out_wErrorCode := 16#0000;
+         s_tonTimeout(IN := FALSE, PT := in_tTimeout);
+         IF s_nStep = 99 THEN s_nStep := 0; END_IF;
+      END_IF;
+
+      IF NOT in_bEnable THEN
+         out_bAlive := FALSE; out_bFault := FALSE;
+         s_nStep := 0; RETURN;
+      END_IF;
+
+      // Heartbeat edge detection
+      t_bHeartbeatEdge    := in_bHeartbeat AND NOT s_bHeartbeatLastMem;
+      s_bHeartbeatLastMem := in_bHeartbeat;
+   END_REGION
+
+
+   REGION 02_STATE_MACHINE
+      CASE s_nStep OF
+
+         0:  // MONITORING
+            out_bAlive := TRUE;
+
+            IF t_bHeartbeatEdge THEN
+               // Heartbeat received → reset timeout
+               s_tonTimeout(IN := FALSE, PT := in_tTimeout);
+            END_IF;
+
+            s_tonTimeout(IN := TRUE, PT := in_tTimeout);
+
+            IF s_tonTimeout.Q THEN
+               // Timeout — heartbeat missed
+               out_bAlive := FALSE;
+               out_bFault := TRUE;
+               out_wErrorCode := 16#0001;   // 16#0001 = Heartbeat timeout
+               out_dTimeoutCount := out_dTimeoutCount + 1;
+               s_nErrorCount := s_nErrorCount + 1;
+               s_tonTimeout(IN := FALSE, PT := in_tTimeout);
+               s_nStep := 99;
+            END_IF;
+
+            // Communication loss monitoring (optional)
+            IF in_bMonitorComms THEN
+               // <PROJECT_COMMS_CHECK> — wire to Profinet/OPC-UA loss flag
+               // Placeholder: if comms check fails trigger 16#0002
+               // out_bFault := TRUE; out_wErrorCode := 16#0002;
+               // TIA quirk: external-source SCL refuses a statement-free IF
+               // body ("Compound part of instruction expected") — the bare
+               // ';' below keeps this placeholder compilable.
+               ;
+            END_IF;
+
+         99: // FAULT — latched until reset
+            out_bAlive := FALSE; out_bFault := TRUE;
+
+      ELSE
+         out_wErrorCode := 16#FFFF; out_bFault := TRUE; s_nStep := 99;
+      END_CASE;
+
+      IF s_nStep <> s_nStepLast THEN s_nStepLast := s_nStep; END_IF;
+   END_REGION
+
+
+   REGION 03_OUTPUT_LOGIC
+      out_nState := s_nStep;
+   END_REGION
+
+
+   REGION 04_DIAGNOSTICS
+      // out_dTimeoutCount: total timeout events
+   END_REGION
+
+
+END_FUNCTION_BLOCK

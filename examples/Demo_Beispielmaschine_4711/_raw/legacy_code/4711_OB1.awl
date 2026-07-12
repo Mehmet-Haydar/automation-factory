@@ -1,0 +1,31 @@
+NETZWERK 1   HYDRAULIKPUMPE STERN-DREIECK ANLAUF
+      U     E    0.0          // Start Taster
+      U     E    1.3          // Motorschutz OK (Oeffner)
+      S     M   10.0          // Pumpe Anforderung
+      U     M   10.0
+      =     A    4.0          // Netzschuetz
+      U     M   10.0
+      UN    T    1            // Sternzeit laeuft noch
+      =     A    4.1          // Sternschuetz
+      U     M   10.0
+      L     S5T#6S
+      SI    T    1
+      U     T    1
+      UN    A    4.1          // Stern muss offen sein!
+      =     A    4.2          // Dreieckschuetz
+
+NETZWERK 2   BANDMOTOR
+      U     M   10.0          // Pumpe laeuft
+      U     E    1.4          // Band Rueckmeldung (Selbsthaltung)
+      O     E    0.1          // Band Start
+      UN    E    1.5          // Band Motorschutz
+      =     A    4.3          // Bandschuetz
+
+NETZWERK 3   KUEHLVENTIL
+      U     A    4.3          // Band laeuft
+      =     A    4.4          // Kuehlventil auf
+
+NETZWERK 4   OELTEMPERATUR
+      L     EW   10           // Fuehler 4-20mA
+      T     MW  100           // Rohwert merken
+BE

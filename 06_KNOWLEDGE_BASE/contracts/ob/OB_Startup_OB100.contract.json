@@ -1,0 +1,106 @@
+{
+  "_schema_version": "1.0.0",
+  "contract_version": "1.0.0",
+  "block": {
+    "name": "OB_STARTUP_OB100",
+    "version": "1.0.0",
+    "type": "OB",
+    "domain": "ob",
+    "device_type": "OB100",
+    "platform": "S7_1500_TIA_V18+",
+    "source": "Factory",
+    "lifecycle": "DRAFT",
+    "description": "Startup OB100. Runs once on CPU STARTUP. Initializes all DB instances to safe defaults, sets initial mode to STOPPED, clears alarms."
+  },
+  "interface": {
+    "inputs": [],
+    "outputs": [],
+    "in_out": [],
+    "static_vars": []
+  },
+  "constraints": {
+    "mandatory_regions": [
+      "01_DB_INIT",
+      "02_SAFE_STATE",
+      "03_VERSION_LOG"
+    ],
+    "mandatory_behaviors": [
+      {
+        "id": "B-OB100-001",
+        "description": "OB100 ORGANIZATION_BLOCK declaration",
+        "check_pattern": "ORGANIZATION_BLOCK\\s+\"?OB_STARTUP_OB100\"?|ORGANIZATION_BLOCK\\s+\"?OB100\"?|ORGANIZATION_BLOCK\\s+\"?OB 100\"?",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-OB100-002",
+        "description": "DB initialization region present",
+        "check_pattern": "01_DB_INIT|DB_INIT|DB.*init|Init.*DB",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-OB100-003",
+        "description": "Safe state set on startup",
+        "check_pattern": "02_SAFE_STATE|SAFE_STATE|Safe.*State|safe.*state",
+        "severity": "MUST"
+      }
+    ],
+    "forbidden_patterns": [
+      "CURRENT_TIME\\(\\)"
+    ],
+    "error_codes": []
+  },
+  "gate": {
+    "checks": [
+      {
+        "id": "G-01",
+        "type": "structural",
+        "description": "Structural balance",
+        "required": true
+      },
+      {
+        "id": "G-03",
+        "type": "contract_behavior",
+        "description": "MUST behaviors",
+        "required": true
+      },
+      {
+        "id": "G-05",
+        "type": "forbidden_pattern",
+        "description": "No proprietary calls",
+        "required": true
+      },
+      {
+        "id": "G-06",
+        "type": "plcrex",
+        "description": "PLCreX optional",
+        "required": false
+      }
+    ]
+  },
+  "prompt_binding": {
+    "file": "04_AI_PROMPTS/code_gen/ob/PROMPT_OB_STARTUP_OB100.md",
+    "version": "1.0.0",
+    "last_synced": "2026-05-30"
+  },
+  "duplicate_detection": {
+    "alternatives": [],
+    "note": "One per project. Generated from project-specific DB list."
+  },
+  "meta": {
+    "source": "factory",
+    "license": "MIT",
+    "safety_class": "STANDARD",
+    "target_platform": "TIA Portal V18+",
+    "compatible_tia": [
+      "V18",
+      "V19"
+    ]
+  },
+  "behaviors": [],
+  "acceptance": {
+    "contract_check": true,
+    "compile_check": true,
+    "sim_test": true,
+    "human_signoff": true
+  }
+}

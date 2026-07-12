@@ -1,0 +1,91 @@
+// TEST FIXTURE — deliberately broken motor block for gate-rejection tests.
+// DO NOT use in production. Preserves original bugs of FB_Motor_Standard.scl
+// before the Phase-3 surgical repair (2026-05-30).
+//
+// Bugs present (intentional):
+//   - Block name: FB_Motor_Conveyor (not FB_MOTOR_DOL / FB_Motor_Standard)
+//   - Missing required inputs: in_bEnable, in_bFeedbackRun, in_bFeedbackOverload
+//   - CURRENT_TIME() — forbidden Siemens proprietary call
+//   - No REGION blocks (01_INPUT_VALIDATION etc. absent)
+//   - No error codes 16#0001..16#0006
+
+FUNCTION_BLOCK "FB_Motor_Conveyor"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 1.0.0
+   VAR_INPUT
+      in_bStartCmd : BOOL := FALSE;
+      in_bStopCmd  : BOOL := FALSE;
+      in_bResetCmd : BOOL := FALSE;
+      in_bSafetyOK : BOOL := FALSE;
+      in_iMode     : INT  := 0;
+      in_rSetSpeed : REAL := 0.0;
+   END_VAR
+
+   VAR_OUTPUT
+      out_bRunning   : BOOL := FALSE;
+      out_bFault     : BOOL := FALSE;
+      out_iFaultCode : INT  := 0;
+      out_rActSpeed  : REAL := 0.0;
+      out_tRuntime   : TIME := T#0s;
+   END_VAR
+
+   VAR_IN_OUT
+      inout_udMotorData : "UDT_Motor";
+   END_VAR
+
+   VAR
+      stat_bInternalRunReq : BOOL := FALSE;
+      stat_tStartTime      : TIME := T#0s;
+      stat_TON_StartDelay  : TON;
+      stat_TON_StopDelay   : TON;
+      stat_iState          : INT  := 0;
+   END_VAR
+
+   VAR_TEMP
+      temp_bStartEnable : BOOL;
+      temp_rCalcSpeed   : REAL;
+   END_VAR
+
+BEGIN
+
+IF NOT in_bSafetyOK THEN
+    stat_bInternalRunReq := FALSE;
+    out_bRunning := FALSE;
+    out_bFault := TRUE;
+    out_iFaultCode := 1;
+    RETURN;
+END_IF;
+
+temp_bStartEnable := in_bStartCmd AND NOT in_bStopCmd AND in_bSafetyOK
+                     AND NOT out_bFault;
+
+IF temp_bStartEnable THEN
+    stat_bInternalRunReq := TRUE;
+    IF stat_tStartTime = T#0s THEN
+        stat_tStartTime := CURRENT_TIME();
+    END_IF;
+END_IF;
+
+IF in_bStopCmd THEN
+    stat_bInternalRunReq := FALSE;
+END_IF;
+
+IF stat_bInternalRunReq THEN
+    temp_rCalcSpeed := MIN_REAL(in_rSetSpeed, out_rActSpeed + 5.0);
+ELSE
+    temp_rCalcSpeed := MAX_REAL(0.0, out_rActSpeed - 10.0);
+END_IF;
+out_rActSpeed := temp_rCalcSpeed;
+
+out_bRunning := stat_bInternalRunReq AND (out_rActSpeed > 0.0);
+
+IF in_bResetCmd THEN
+    out_bFault := FALSE;
+    out_iFaultCode := 0;
+END_IF;
+
+IF out_bRunning THEN
+    out_tRuntime := out_tRuntime + T#100ms;
+END_IF;
+
+END_FUNCTION_BLOCK

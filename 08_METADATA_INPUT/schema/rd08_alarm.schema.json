@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "rd08_alarm.schema.json",
+  "title": "RD08 — Alarm List",
+  "description": "Per-project alarms. ISA-18.2 / IEC 62682. Spec: MDSCHEMA_RAWDATA_08_ALARM.md",
+  "type": "object",
+  "required": ["project_id", "Alarms"],
+  "properties": {
+    "project_id": { "type": "string" },
+    "output_language": { "type": "string", "enum": ["TR", "EN", "DE"] },
+    "Alarms": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["AlarmID", "AlarmName", "Class", "Priority", "TriggerTag", "TriggerCondition", "AlarmText_EN", "AcknRequired", "RecommendedAction", "Status"],
+        "properties": {
+          "AlarmID": { "type": "string", "pattern": "^ALM\\d{4}$" },
+          "AlarmName": { "type": "string", "minLength": 1 },
+          "Class": { "type": "string", "enum": ["Critical", "Warning", "Info"] },
+          "Priority": { "type": "integer", "minimum": 1, "maximum": 999 },
+          "TriggerTag": { "type": "string", "minLength": 1 },
+          "TriggerCondition": { "type": "string", "minLength": 1 },
+          "LimitValue": { "type": ["number", "string"] },
+          "LimitUnit": { "type": "string" },
+          "AlarmText_EN": { "type": "string", "minLength": 5 },
+          "AlarmText_TR": { "type": "string" },
+          "AlarmText_DE": { "type": "string" },
+          "AcknRequired": { "type": "string", "enum": ["Y", "N"] },
+          "SuppressCondition": { "type": "string" },
+          "LinkedTimer": { "type": "string", "pattern": "^(TMR_[A-Z0-9]+_\\d{3}|)$" },
+          "LinkedSF": { "type": "string", "pattern": "^(SF\\d{3}|)$" },
+          "RecommendedAction": { "type": "string", "minLength": 1 },
+          "Notes": { "type": "string" },
+          "Status": { "type": "string", "enum": ["Active", "Inactive", "Spare"] }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "Class": { "const": "Critical" } } },
+            "then": {
+              "properties": {
+                "AcknRequired": { "const": "Y" }
+              }
+            }
+          }
+        ],
+        "additionalProperties": true
+      }
+    }
+  }
+}

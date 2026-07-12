@@ -1,0 +1,114 @@
+{
+  "_schema_version": "1.0.0",
+  "contract_version": "1.0.0",
+  "block": {
+    "name": "OB_MAIN_OB1",
+    "version": "1.0.0",
+    "type": "OB",
+    "domain": "ob",
+    "device_type": "OB1",
+    "platform": "S7_1500_TIA_V18+",
+    "source": "Factory",
+    "lifecycle": "DRAFT",
+    "description": "Main cyclic OB1. Calls all FB instances in priority order: Safety check → Mode manager → Alarms → Motors → Valves → PIDs → Sequence → Diagnostics. Template only — actual calls vary per project."
+  },
+  "interface": {
+    "inputs": [],
+    "outputs": [],
+    "in_out": [],
+    "static_vars": []
+  },
+  "constraints": {
+    "mandatory_regions": [
+      "01_SAFETY_CHECK",
+      "02_MODE_MANAGER",
+      "03_ALARMS",
+      "04_PROCESS_CALLS",
+      "05_DIAGNOSTICS"
+    ],
+    "mandatory_behaviors": [
+      {
+        "id": "B-OB1-001",
+        "description": "Safety check is first region (highest priority)",
+        "check_pattern": "01_SAFETY_CHECK|Safety.*Check|SAFETY_CHECK",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-OB1-002",
+        "description": "OB1 ORGANIZATION_BLOCK declaration",
+        "check_pattern": "ORGANIZATION_BLOCK\\s+\"?OB_MAIN_OB1\"?|ORGANIZATION_BLOCK\\s+\"?OB1\"?|ORGANIZATION_BLOCK\\s+\"?OB 1\"?",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-OB1-003",
+        "description": "Mode manager FB called",
+        "check_pattern": "FB_ModeManager|ModeManager|Mode_Manager",
+        "severity": "SHOULD"
+      },
+      {
+        "id": "B-OB1-004",
+        "description": "Comment header with project info present",
+        "check_pattern": "PROJECT|Customer|Platform|Version",
+        "severity": "SHOULD"
+      }
+    ],
+    "forbidden_patterns": [
+      "CURRENT_TIME\\(\\)"
+    ],
+    "error_codes": []
+  },
+  "gate": {
+    "checks": [
+      {
+        "id": "G-01",
+        "type": "structural",
+        "description": "Structural balance (ORGANIZATION_BLOCK/END)",
+        "required": true
+      },
+      {
+        "id": "G-03",
+        "type": "contract_behavior",
+        "description": "MUST behaviors present",
+        "required": true
+      },
+      {
+        "id": "G-05",
+        "type": "forbidden_pattern",
+        "description": "No proprietary calls",
+        "required": true
+      },
+      {
+        "id": "G-06",
+        "type": "plcrex",
+        "description": "PLCreX optional",
+        "required": false
+      }
+    ]
+  },
+  "prompt_binding": {
+    "file": "04_AI_PROMPTS/code_gen/ob/PROMPT_OB_MAIN_OB1.md",
+    "version": "1.0.0",
+    "last_synced": "2026-05-30"
+  },
+  "duplicate_detection": {
+    "alternatives": [],
+    "note": "Generated per project — NOT a frozen block. Structure is standardized, content varies per device list."
+  },
+  "meta": {
+    "source": "factory",
+    "license": "MIT",
+    "safety_class": "STANDARD",
+    "target_platform": "TIA Portal V18+",
+    "compatible_tia": [
+      "V18",
+      "V19"
+    ]
+  },
+  "behaviors": [],
+  "acceptance": {
+    "contract_check": true,
+    "compile_check": true,
+    "sim_test": true,
+    "human_signoff": true
+  }
+}

@@ -1,0 +1,259 @@
+{
+  "_schema_version": "1.0.0",
+  "contract_version": "1.0.0",
+  "block": {
+    "name": "FB_PID_WRAPPER",
+    "version": "1.0.0",
+    "type": "FB",
+    "domain": "process",
+    "device_type": "PID",
+    "platform": "S7_1500_TIA_V18+",
+    "source": "Factory",
+    "lifecycle": "DRAFT",
+    "description": "PID loop wrapper. Wraps TIA Portal PID_Compact or PID_3Step with enable/disable, manual/auto bumpless transfer, output limits, and diagnostics."
+  },
+  "interface": {
+    "inputs": [
+      {
+        "name": "in_bEnable",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bReset",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bManualMode",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_rSetpoint",
+        "iec_type": "Real",
+        "default": 0.0,
+        "required": true
+      },
+      {
+        "name": "in_rProcessValue",
+        "iec_type": "Real",
+        "default": 0.0,
+        "required": true
+      },
+      {
+        "name": "in_rManualOutput",
+        "iec_type": "Real",
+        "default": 0.0,
+        "required": true
+      },
+      {
+        "name": "in_rOutputMin",
+        "iec_type": "Real",
+        "default": 0.0,
+        "required": true
+      },
+      {
+        "name": "in_rOutputMax",
+        "iec_type": "Real",
+        "default": 100.0,
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "name": "out_rOutput",
+        "iec_type": "Real",
+        "default": 0.0,
+        "required": true
+      },
+      {
+        "name": "out_rError",
+        "iec_type": "Real",
+        "default": 0.0,
+        "required": true,
+        "description": "PV - SP deviation"
+      },
+      {
+        "name": "out_bAtSetpoint",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bReady",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bError",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_wErrorCode",
+        "iec_type": "Word",
+        "default": "16#0000",
+        "required": true
+      },
+      {
+        "name": "out_nState",
+        "iec_type": "Int",
+        "default": 0,
+        "required": true
+      }
+    ],
+    "in_out": [],
+    "static_vars": [
+      {
+        "name": "s_bResetEdgeMem",
+        "iec_type": "Bool"
+      },
+      {
+        "name": "s_bResetTrig",
+        "iec_type": "Bool"
+      },
+      {
+        "name": "s_nStep",
+        "iec_type": "Int"
+      }
+    ]
+  },
+  "constraints": {
+    "mandatory_regions": [
+      "01_INPUT_VALIDATION",
+      "02_STATE_MACHINE",
+      "03_OUTPUT_LOGIC",
+      "04_DIAGNOSTICS"
+    ],
+    "mandatory_behaviors": [
+      {
+        "id": "B-PID-001",
+        "description": "Reset rising edge",
+        "check_pattern": "s_bResetTrig\\s*:=\\s*.*in_bReset.*AND\\s*NOT.*s_bResetEdgeMem",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-PID-002",
+        "description": "Output clamped to min/max limits",
+        "check_pattern": "in_rOutputMin|in_rOutputMax|OutputMin|OutputMax",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-PID-003",
+        "description": "Manual mode with bumpless transfer",
+        "check_pattern": "in_bManualMode|in_rManualOutput|bumpless|Manual",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-PID-004",
+        "description": "Error (deviation) computed",
+        "check_pattern": "out_rError|deviation|Setpoint.*ProcessValue|ProcessValue.*Setpoint",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-PID-005",
+        "description": "Error code 16#0001 present",
+        "check_pattern": "16#0001",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-PID-006",
+        "description": "FB name is FB_PID_WRAPPER",
+        "check_pattern": "FUNCTION_BLOCK\\s+\"?FB_PID_WRAPPER\"?",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-PID-007",
+        "description": "Optimized Access declared",
+        "check_pattern": "S7_Optimized_Access\\s*:=\\s*'TRUE'",
+        "severity": "MUST"
+      }
+    ],
+    "forbidden_patterns": [
+      "CURRENT_TIME\\(\\)",
+      "GET_SYSTIME\\(\\)"
+    ],
+    "error_codes": [
+      {
+        "hex": "16#0001",
+        "meaning": "Process value out of valid range or sensor fault"
+      },
+      {
+        "hex": "16#0002",
+        "meaning": "Output saturated (at limit) for extended period"
+      }
+    ]
+  },
+  "gate": {
+    "checks": [
+      {
+        "id": "G-01",
+        "type": "structural",
+        "description": "Structural balance",
+        "required": true
+      },
+      {
+        "id": "G-02",
+        "type": "contract_interface",
+        "description": "Required ports",
+        "required": true
+      },
+      {
+        "id": "G-03",
+        "type": "contract_behavior",
+        "description": "MUST behaviors",
+        "required": true
+      },
+      {
+        "id": "G-04",
+        "type": "contract_error_codes",
+        "description": "Error codes in SCL",
+        "required": true
+      },
+      {
+        "id": "G-05",
+        "type": "forbidden_pattern",
+        "description": "No proprietary calls",
+        "required": true
+      },
+      {
+        "id": "G-06",
+        "type": "plcrex",
+        "description": "PLCreX optional",
+        "required": false
+      }
+    ]
+  },
+  "prompt_binding": {
+    "file": "04_AI_PROMPTS/code_gen/process/PROMPT_PROCESS_PID_LOOP.md",
+    "version": "1.0.0",
+    "last_synced": "2026-05-30"
+  },
+  "duplicate_detection": {
+    "alternatives": [],
+    "note": "Wraps TIA PID_Compact. Do not implement the PID algorithm — call Siemens instruction and wrap it."
+  },
+  "meta": {
+    "source": "factory",
+    "license": "MIT",
+    "safety_class": "STANDARD",
+    "target_platform": "TIA Portal V18+",
+    "compatible_tia": [
+      "V18",
+      "V19"
+    ]
+  },
+  "behaviors": [],
+  "acceptance": {
+    "contract_check": true,
+    "compile_check": true,
+    "sim_test": true,
+    "human_signoff": true
+  }
+}

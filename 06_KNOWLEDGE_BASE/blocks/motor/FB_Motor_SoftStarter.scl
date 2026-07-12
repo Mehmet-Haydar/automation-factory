@@ -1,0 +1,210 @@
+// ============================================================================
+// FB_Motor_SoftStarter — Soft-Starter Motor Control
+// Source    : Factory Library
+// Contract  : 06_KNOWLEDGE_BASE/contracts/motor/FB_Motor_SoftStarter.contract.json
+// Lifecycle : AUTO_VERIFIED_structural | PENDING_TIA_VERIFY
+// ============================================================================
+// ============================================================
+// *** SAFETY NOTICE ***
+// This function block is NOT designed or validated for use in
+// Safety Instrumented Systems (SIS) per IEC 61508 / IEC 62061,
+// or as a safety-related control function per ISO 13849 (PLr).
+// For functional safety applications, use only certified safety
+// hardware or F-CPU safety functions. A qualified safety engineer
+// must review all applications involving process or personnel safety.
+// ============================================================
+
+FUNCTION_BLOCK "FB_Motor_SoftStarter"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 1.0
+
+   VAR_INPUT
+      in_bEnable           : Bool := FALSE;
+      in_bReset            : Bool := FALSE;
+      in_bManualMode       : Bool := FALSE;
+      in_bAutoCmd          : Bool := FALSE;   // Automation start command (used in AUTO mode)
+      in_bStartCmd         : Bool := FALSE;
+      in_bStopCmd          : Bool := FALSE;
+      in_bFeedbackReady    : Bool := FALSE;
+      in_bFeedbackTOR      : Bool := FALSE;
+      in_bFeedbackFault    : Bool := FALSE;
+      in_bFeedbackOverload : Bool := FALSE;
+      in_tRampUpTimeout    : Time := T#15S;
+      in_tRampDownTimeout  : Time := T#15S;
+      in_tRestartLockout   : Time := T#3S;
+   END_VAR
+
+   VAR_OUTPUT
+      out_bStartCmd  : Bool := FALSE;
+      out_bStopCmd   : Bool := FALSE;
+      out_bResetCmd  : Bool := FALSE;
+      out_bRunning   : Bool := FALSE;
+      out_bReady     : Bool := FALSE;
+      out_bError     : Bool := FALSE;
+      out_wErrorCode : Word := 16#0000;
+      out_nState     : Int  := 0;
+      out_dRunHours  : DInt := 0;
+   END_VAR
+
+   VAR
+      s_bResetEdgeMem   : Bool := FALSE;
+      s_bResetTrig      : Bool := FALSE;
+      s_bRestartInhibit : Bool := FALSE;   // Inhibit restart after enable rising edge
+      s_bEnableEdgeMem  : Bool := FALSE;   // Edge memory for enable signal
+      s_nStep           : Int  := 0;
+      s_nStepLast     : Int  := 0;
+      s_tonRampUp     : TON;
+      s_tonRampDown   : TON;
+      s_tonLockout    : TON;
+      s_tonRunTick    : TON;                 // 1-second tick for scan-independent run-time counting
+      s_nErrorCount   : DInt := 0;
+   END_VAR
+
+   VAR_TEMP
+      t_bStartEnable : Bool;
+   END_VAR
+
+
+BEGIN
+
+   REGION 01_INPUT_VALIDATION
+      s_bResetTrig    := in_bReset AND NOT s_bResetEdgeMem;
+      s_bResetEdgeMem := in_bReset;
+
+      // Detect enable rising edge — inhibit restart until operator resets
+      IF in_bEnable AND NOT s_bEnableEdgeMem THEN
+          s_bRestartInhibit := TRUE;
+      END_IF;
+      s_bEnableEdgeMem := in_bEnable;
+      // Clear inhibit on explicit operator reset
+      IF s_bResetTrig THEN
+          s_bRestartInhibit := FALSE;
+      END_IF;
+
+      IF s_bResetTrig THEN
+         out_bError := FALSE; out_wErrorCode := 16#0000;
+         out_bResetCmd := TRUE;
+         IF s_nStep = 99 THEN s_nStep := 0; END_IF;
+      ELSE
+         out_bResetCmd := FALSE;
+      END_IF;
+
+      IF NOT in_bEnable THEN
+         out_bStartCmd := FALSE; out_bStopCmd := FALSE;
+         out_bRunning := FALSE; out_bReady := FALSE;
+         s_nStep := 0; RETURN;
+      END_IF;
+
+      IF in_bFeedbackFault OR in_bFeedbackOverload THEN
+         out_bStartCmd := FALSE;
+         IF NOT out_bError THEN
+            out_bError := TRUE;
+            IF in_bFeedbackOverload THEN
+               out_wErrorCode := 16#0003;   // 16#0003 = Overload
+            ELSE
+               out_wErrorCode := 16#0006;   // 16#0006 = Soft-starter fault
+            END_IF;
+            s_nErrorCount := s_nErrorCount + 1;
+         END_IF;
+         s_nStep := 99;
+      END_IF;
+   END_REGION
+
+
+   REGION 02_STATE_MACHINE
+      IF in_bManualMode THEN
+          t_bStartEnable := in_bStartCmd AND NOT in_bStopCmd;
+      ELSE
+          t_bStartEnable := in_bAutoCmd AND NOT in_bStopCmd;
+      END_IF;
+
+      CASE s_nStep OF
+
+         0:  // IDLE
+            out_bReady := TRUE; out_bRunning := FALSE;
+            out_bStartCmd := FALSE; out_bStopCmd := FALSE;
+            s_tonLockout(IN := FALSE, PT := in_tRestartLockout);
+            s_tonRampUp(IN := FALSE, PT := in_tRampUpTimeout);
+            s_tonRunTick(IN := FALSE, PT := T#1S);
+            IF t_bStartEnable AND NOT out_bError AND NOT s_bRestartInhibit AND in_bFeedbackReady THEN
+               s_nStep := 10;
+            ELSIF t_bStartEnable AND NOT in_bFeedbackReady THEN
+               out_bError := TRUE; out_wErrorCode := 16#0001;   // 16#0001 = Not ready
+               s_nErrorCount := s_nErrorCount + 1;
+               s_nStep := 99;
+            END_IF;
+
+         10: // RAMP UP
+            IF NOT t_bStartEnable OR NOT in_bEnable THEN
+               out_bStartCmd := FALSE;
+               s_nStep := 0;
+            ELSE
+               out_bStartCmd := TRUE; out_bReady := FALSE;
+               s_tonRampUp(IN := in_bFeedbackTOR = FALSE, PT := in_tRampUpTimeout);
+               IF in_bFeedbackTOR THEN s_nStep := 20; END_IF;
+               IF s_tonRampUp.Q THEN
+                  out_bError := TRUE; out_wErrorCode := 16#0010;   // 16#0010 = Ramp-up timeout
+                  s_nErrorCount := s_nErrorCount + 1;
+                  s_nStep := 99;
+               END_IF;
+            END_IF;
+
+         20: // RUNNING (at speed)
+            out_bRunning := TRUE; out_bStartCmd := TRUE;
+            s_tonRampUp(IN := FALSE, PT := in_tRampUpTimeout);
+            // Run-seconds counter: TON-based — scan-cycle independent
+            s_tonRunTick(IN := TRUE, PT := T#1S);
+            IF s_tonRunTick.Q THEN
+               out_dRunHours := out_dRunHours + 1;
+               s_tonRunTick(IN := FALSE, PT := T#1S);
+            END_IF;
+            IF NOT t_bStartEnable THEN
+               out_bStopCmd := TRUE; out_bStartCmd := FALSE;
+               s_nStep := 30;
+            END_IF;
+
+         30: // RAMP DOWN
+            out_bRunning := FALSE; out_bStopCmd := TRUE;
+            s_tonRampDown(IN := TRUE, PT := in_tRampDownTimeout);
+            IF NOT in_bFeedbackTOR THEN
+               s_tonRampDown(IN := FALSE, PT := in_tRampDownTimeout);
+               out_bStopCmd := FALSE;
+               s_tonLockout(IN := TRUE, PT := in_tRestartLockout);
+               s_nStep := 40;
+            END_IF;
+            IF s_tonRampDown.Q THEN
+               out_bError := TRUE; out_wErrorCode := 16#0011;   // 16#0011 = Ramp-down timeout
+               s_nErrorCount := s_nErrorCount + 1;
+               s_nStep := 99;
+            END_IF;
+
+         40: // LOCKOUT (restart suppression)
+            s_tonLockout(IN := TRUE, PT := in_tRestartLockout);
+            IF s_tonLockout.Q THEN
+               s_tonLockout(IN := FALSE, PT := in_tRestartLockout);
+               s_nStep := 0;
+            END_IF;
+
+         99: // FAULT
+            out_bStartCmd := FALSE; out_bStopCmd := FALSE;
+            out_bRunning := FALSE; out_bReady := FALSE;
+
+      ELSE
+         out_wErrorCode := 16#FFFF; out_bError := TRUE; s_nStep := 99;
+      END_CASE;
+
+      IF s_nStep <> s_nStepLast THEN s_nStepLast := s_nStep; END_IF;
+   END_REGION
+
+
+   REGION 03_OUTPUT_LOGIC
+      out_nState := s_nStep;
+   END_REGION
+
+
+   REGION 04_DIAGNOSTICS
+      // s_nErrorCount: total fault events
+   END_REGION
+
+
+END_FUNCTION_BLOCK

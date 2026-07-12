@@ -1,0 +1,347 @@
+// FB_Motor_Conveyor — Förderband-Motorsteuerung (DOL, Almanca yorumlu)
+// ============================================================================
+// Quelle    : Kunde Müller Conveyor Retrofit (synthetisches Demo-Projekt)
+// Projekt   : KMG-2026-001
+// Vorlage   : 01_GLOBAL_STANDARDS/templates/GLOBAL_FB_TEMPLATE.scl
+// Referenz  : 06_KNOWLEDGE_BASE/blocks/motor/FB_Motor_DOL.scl (Bibliotheks-Pattern)
+// Plattform : TIA Portal V18+  (S7-1500F / CPU 1515F-2 PN)
+// Version   : 1.0.0
+// Lifecycle : AUTO_VERIFIED_structural | PENDING_TIA_VERIFY
+// Spezifikation : metadata/RD10_FBSpec.md (Sayfa 2 — ParamList)
+//
+// Retrofit-Herkunft:
+//   Ursprung = FC10/FC30-Logik des alten S7-300 (STL, 1995, A. Schmidt).
+//   Die ursprüngliche absolute Verdrahtung (A I0.0 / = Q0.0, M-Bit-Sequencer)
+//   wurde gemäß RD10 in einen modularen, mehrfach-instanzierbaren DOL-FB
+//   überführt. Original-Blockname laut RD10: FB10.
+//   Instanzen: DB_Mot_Conv01 (Conveyor01), DB_Mot_Conv02 (Conveyor02).
+//
+// Zweck:
+//   Direkt-Online-Ansteuerung eines Förderbandmotors (Schütz).
+//   Enthält: Rücklauf-Überwachung (Watchdog), Erkennung verschweißter
+//   Schütze, Antriebsstörungs-Behandlung, flankengesteuerter Reset,
+//   Wiederanlaufsperre nach Freigabe-Flanke. Drehzahl-Sollwert wird für
+//   den optionalen Antrieb (FU) durchgereicht — die Logik bleibt DOL.
+//
+// PENDING_TIA_VERIFY:
+//   Strukturelles Gate bestanden. TIA-Portal-Übersetzung + PLCSIM-Lauf
+//   wurden NICHT durchgeführt. Vor Produktiveinsatz muss ein Mensch prüfen.
+// ============================================================================
+// ============================================================
+// *** SICHERHEITSHINWEIS ***
+// Dieser Funktionsbaustein ist NICHT für sicherheitsgerichtete
+// Funktionen ausgelegt oder validiert (IEC 61508 / IEC 62061 /
+// ISO 13849). Der Förderbandmotor ist eine Standard-Steuerung,
+// KEINE Not-Halt-Funktion. Der NOT-AUS gehört auf die F-CPU
+// (siehe RD05/RD14, Befund FND001/FND008/FND009).
+// Der Eingang in_bSafetyOK ist nur eine Freigabe-Verriegelung,
+// die das Safety-Ergebnis der F-CPU spiegelt — er ersetzt KEINE
+// zertifizierte Sicherheitsfunktion.
+// ============================================================
+
+FUNCTION_BLOCK "FB_Motor_Conveyor"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 1.0.0
+
+   VAR_INPUT
+      // === Schnittstelle laut RD10_FBSpec (Sayfa 2 — ParamList) ===
+      in_bEnable        : Bool := FALSE;   // FB-Freigabe (FALSE = sofort Stopp)
+      in_bStartCmd      : Bool := FALSE;    // Start-Befehl    (LinkedTag: MOT_CV01_001_START)
+      in_bStopCmd       : Bool := FALSE;    // Stopp-Befehl
+      in_bResetCmd      : Bool := FALSE;    // Reset-Befehl (nur steigende Flanke!)
+      in_bSafetyOK      : Bool := FALSE;    // Safety-System OK (Spiegel von F_DB_EStop.bQ)
+      in_iMode          : Int  := 0;        // Betriebsart (0=Hand/Aus, 1=AUTO, 2=MAN)
+      in_rSetSpeed      : Real := 0.0;      // Drehzahl-Sollwert (%) — Durchreichung an FU
+      // === Rückmeldungen vom Antrieb (RD01: MOT_CV01_001_RUN / _FAULT) ===
+      in_bFeedbackRun   : Bool := FALSE;    // Motor-läuft-Rückmeldung (Schütz-Hilfskontakt)
+      in_bDriveFault    : Bool := FALSE;    // Antriebsstörung (NC: TRUE = Störung anstehend)
+      // === Überwachungs-Parameter (Watchdog-Zeiten) ===
+      in_tStartTimeout  : Time := T#3S;     // Max. Wartezeit auf Rücklauf nach Start
+      in_tStopTimeout   : Time := T#2S;     // Max. Wartezeit bis Rücklauf abfällt (Stopp)
+      in_tFbkDebounce   : Time := T#200MS;  // Entprellzeit für Rücklauf-Verlust im Lauf
+   END_VAR
+
+   VAR_OUTPUT
+      // === Ausgänge laut RD10_FBSpec ===
+      out_bRunning      : Bool := FALSE;    // Motor läuft / Schütz-Ansteuerung (MOT_CV01_001_OUT)
+      out_bReady        : Bool := FALSE;    // FB bereit (freigegeben, keine Störung)
+      out_bFault        : Bool := FALSE;    // Störung aktiv
+      out_iFaultCode    : Int  := 0;        // Störungscode (siehe REGION 02)
+      out_nState        : Int  := 0;        // Aktueller Schrittnummer der Zustandsmaschine
+      out_rActSpeed     : Real := 0.0;      // Drehzahl-Istwert (%) — vom realen FU (ANALOG_SP_OUT_001)
+      out_nErrorCount   : DInt := 0;        // Gesamtzahl Störungsereignisse (HMI / Historian)
+   END_VAR
+
+   VAR_IN_OUT
+      inout_udMotorData : "UDT_Motor";      // HMI-Datenstruktur (Faceplate, DB_Mot_Conv0x.sMotor)
+   END_VAR
+
+   VAR
+      // === Zustandsmaschine ===
+      s_nStep           : Int  := 0;        // Aktueller Schritt
+      s_nStepLast       : Int  := 0;        // Vorheriger Schritt (Flankenerkennung)
+      // === Flankenspeicher Reset ===
+      s_bResetEdgeMem   : Bool := FALSE;    // Flankenspeicher für Reset
+      s_bResetTrig      : Bool := FALSE;    // Reset-Trigger (Ein-Schuss)
+      // === Wiederanlaufsperre nach Freigabe-Flanke ===
+      s_bRestartInhibit : Bool := FALSE;    // Wiederanlauf gesperrt bis Operator quittiert
+      s_bEnableEdgeMem  : Bool := FALSE;    // Flankenspeicher für Freigabe
+      // === Überwachungs-Timer (Multi-Instance-fähig, je Instanz eigener Zähler) ===
+      s_tonStartDelay   : TON;              // Start-Rücklauf-Watchdog (RD10: stat_TON_StartDelay)
+      s_tonStopTO       : TON;              // Stopp-Watchdog (verschweißtes Schütz)
+      s_tonFbkDebounce  : TON;              // Entprellung Rücklauf-Verlust im Lauf
+      s_tonRunTick      : TON;              // 1-Sekunden-Takt für scanunabhängige Laufzeit
+      // === Diagnose / Zähler ===
+      s_bInternalRunReq : Bool := FALSE;    // İç çalışma talebi (RD10: stat_bInternalRunReq)
+      s_bInitialized    : Bool := FALSE;    // Erststart-Init-Flag
+      s_dRunSecs        : DInt := 0;        // Interner Laufzeit-Sekundenzähler
+      s_nErrorCount     : DInt := 0;        // Gesamtzahl Störungsereignisse
+      s_nStartCount     : DInt := 0;        // Gesamtzahl Startversuche (Wartung)
+   END_VAR
+
+   VAR_TEMP
+      t_bStartEnable    : Bool;             // Abgeleitete Start-Freigabe
+   END_VAR
+
+
+BEGIN
+
+
+   //=========================================================================
+   // REGION 01_INPUT_VALIDATION
+   // Init der HMI-Struktur, flankengesteuerter Reset, Freigabe-/Safety-Gate,
+   // Antriebsstörung. Entspricht dem Bibliotheks-Pattern FB_Motor_DOL.
+   //=========================================================================
+   REGION 01_INPUT_VALIDATION
+
+      // Freigabe-Flanke erkennen — Wiederanlauf bis Quittierung sperren
+      IF in_bEnable AND NOT s_bEnableEdgeMem THEN
+         s_bRestartInhibit := TRUE;
+      END_IF;
+      s_bEnableEdgeMem := in_bEnable;
+      IF s_bResetTrig THEN
+         s_bRestartInhibit := FALSE;
+      END_IF;
+
+      // Erststart: HMI-Datenstruktur einmalig initialisieren
+      IF NOT s_bInitialized THEN
+         inout_udMotorData.bRunning   := FALSE;
+         inout_udMotorData.bFault     := FALSE;
+         inout_udMotorData.iFaultCode := 0;
+         inout_udMotorData.rSetSpeed  := 0.0;
+         inout_udMotorData.rActSpeed  := 0.0;
+         inout_udMotorData.tRuntime   := 0;
+         s_bInitialized               := TRUE;
+      END_IF;
+
+      // Flankengesteuerter Reset (MUSS: pegelgesteuerter Reset ist verboten)
+      s_bResetTrig    := in_bResetCmd AND NOT s_bResetEdgeMem;
+      s_bResetEdgeMem := in_bResetCmd;
+
+      IF s_bResetTrig THEN
+         out_bFault     := FALSE;
+         out_iFaultCode := 0;
+         IF s_nStep = 99 THEN
+            s_nStep := 0;
+         END_IF;
+      END_IF;
+
+      // FB gesperrt, Hand/Aus-Betrieb oder Safety NICHT OK: sofort in Ruhe
+      IF NOT in_bEnable OR in_iMode = 0 OR NOT in_bSafetyOK THEN
+         s_nStep      := 0;
+         out_bRunning := FALSE;
+         out_bReady   := FALSE;
+         // HMI-UDT vor frühem Austritt synchronisieren (keine veralteten Werte)
+         inout_udMotorData.bRunning   := FALSE;
+         inout_udMotorData.bFault     := out_bFault;
+         inout_udMotorData.iFaultCode := out_iFaultCode;
+         RETURN;
+      END_IF;
+
+      // Antriebsstörung: sofortiger Stopp + Störung, unabhängig vom Zustand
+      IF in_bDriveFault THEN
+         out_bRunning := FALSE;
+         IF NOT out_bFault THEN
+            out_bFault     := TRUE;
+            out_iFaultCode := 3;          // 3 = Antriebsstörung (orig: Antriebsstörung)
+            s_nErrorCount  := s_nErrorCount + 1;
+         END_IF;
+         s_nStep := 99;
+      END_IF;
+
+   END_REGION
+
+
+   //=========================================================================
+   // REGION 02_STATE_MACHINE
+   // Zustände: 0=RUHE, 10=ANLAUF, 20=LAUF, 30=AUSLAUF, 99=STÖRUNG
+   // Störungscodes: 1=kein Rücklauf, 2=verschweißtes Schütz,
+   //                3=Antriebsstörung, 6=Rücklauf-Anomalie, 16#FFFF=undef.
+   //=========================================================================
+   REGION 02_STATE_MACHINE
+
+      // Start-Freigabe ableiten — Stopp dominiert (fail-safe)
+      s_bInternalRunReq := in_bStartCmd AND NOT in_bStopCmd;
+      t_bStartEnable    := s_bInternalRunReq;
+
+      CASE s_nStep OF
+
+         0:  // RUHE — bereit für Start
+            out_bReady   := TRUE;
+            out_bRunning := FALSE;
+            s_tonStartDelay(IN := FALSE, PT := in_tStartTimeout);
+            s_tonStopTO(IN := FALSE, PT := in_tStopTimeout);
+            s_tonRunTick(IN := FALSE, PT := T#1S);
+            IF t_bStartEnable AND NOT out_bFault AND NOT s_bRestartInhibit THEN
+               s_nStartCount := s_nStartCount + 1;
+               s_nStep       := 10;
+            END_IF;
+
+         10: // ANLAUF — Schütz angesteuert, warte auf Rücklauf
+            out_bRunning := TRUE;
+            s_tonStartDelay(IN := TRUE, PT := in_tStartTimeout);
+
+            IF in_bFeedbackRun THEN
+               s_nStep := 20;            // Rücklauf da — in LAUF wechseln
+            END_IF;
+
+            IF s_tonStartDelay.Q THEN
+               // Kein Rücklauf innerhalb in_tStartTimeout
+               out_bRunning   := FALSE;
+               out_bFault     := TRUE;
+               out_iFaultCode := 1;       // 1 = kein Rücklauf (orig: Motor läuft nicht)
+               s_nErrorCount  := s_nErrorCount + 1;
+               s_nStep        := 99;
+            END_IF;
+
+         20: // LAUF
+            out_bRunning := TRUE;
+            out_bReady   := FALSE;
+            s_tonStartDelay(IN := FALSE, PT := in_tStartTimeout);
+
+            // Laufzeit-Zähler: TON-basiert — scanzyklusunabhängig
+            s_tonRunTick(IN := TRUE, PT := T#1S);
+            IF s_tonRunTick.Q THEN
+               s_dRunSecs := s_dRunSecs + 1;
+               s_tonRunTick(IN := FALSE, PT := T#1S);
+            END_IF;
+
+            IF NOT t_bStartEnable THEN
+               s_tonFbkDebounce(IN := FALSE, PT := in_tFbkDebounce);
+               s_nStep := 30;            // Stopp angefordert
+            END_IF;
+
+            // Entprellter Rücklauf-Verlust — verhindert Fehlauslösung bei Kontaktprellen
+            IF s_nStep = 20 THEN
+               s_tonFbkDebounce(IN := NOT in_bFeedbackRun, PT := in_tFbkDebounce);
+               IF s_tonFbkDebounce.Q THEN
+                  out_bRunning   := FALSE;
+                  out_bFault     := TRUE;
+                  out_iFaultCode := 6;    // 6 = Rücklauf-Anomalie (Prellen / Abriss)
+                  s_nErrorCount  := s_nErrorCount + 1;
+                  s_nStep        := 99;
+               END_IF;
+            END_IF;
+
+         30: // AUSLAUF — Schütz abgeworfen, warte auf Abfall des Rücklaufs
+            out_bRunning := FALSE;
+            s_tonStopTO(IN := TRUE, PT := in_tStopTimeout);
+
+            IF NOT in_bFeedbackRun THEN
+               s_nStep := 0;             // Rücklauf korrekt abgefallen
+               s_tonStopTO(IN := FALSE, PT := in_tStopTimeout);
+            END_IF;
+
+            IF s_tonStopTO.Q THEN
+               // Rücklauf trotz Stopp aktiv — verschweißtes Schütz
+               out_bFault     := TRUE;
+               out_iFaultCode := 2;       // 2 = verschweißtes Schütz (Rücklauf klebt)
+               s_nErrorCount  := s_nErrorCount + 1;
+               s_nStep        := 99;
+            END_IF;
+
+         99: // STÖRUNG — warte auf flankengesteuerten Reset
+            out_bRunning := FALSE;
+            out_bReady   := FALSE;
+            s_tonStartDelay(IN := FALSE, PT := in_tStartTimeout);
+            s_tonStopTO(IN := FALSE, PT := in_tStopTimeout);
+            // Austritt über s_bResetTrig in REGION 01_INPUT_VALIDATION
+
+      ELSE
+         // Undefinierter Zustand — erzwinge Störung
+         out_bFault     := TRUE;
+         out_iFaultCode := 16#FFFF;
+         s_nStep        := 99;
+      END_CASE;
+
+      // Schritt-Übergang verfolgen
+      IF s_nStep <> s_nStepLast THEN
+         s_nStepLast := s_nStep;
+      END_IF;
+
+   END_REGION
+
+
+   //=========================================================================
+   // REGION 03_OUTPUT_LOGIC
+   // Zustand auf Ausgänge abbilden.
+   //=========================================================================
+   REGION 03_OUTPUT_LOGIC
+
+      out_nState := s_nStep;
+      // out_rActSpeed MUSS vom Aufrufer mit der realen FU-Rückmeldung verdrahtet
+      // werden (NO_FAKE_FEEDBACK). Hier wird NICHT gerechnet oder gerampt.
+      // in_rSetSpeed wird nur zur HMI-Anzeige durchgereicht (siehe REGION 04).
+
+   END_REGION
+
+
+   //=========================================================================
+   // REGION 04_DIAGNOSTICS
+   // Zustand auf HMI-UDT (UDT_Motor) synchronisieren.
+   //=========================================================================
+   REGION 04_DIAGNOSTICS
+
+      inout_udMotorData.bRunning     := out_bRunning;
+      inout_udMotorData.bFault       := out_bFault;
+      inout_udMotorData.iFaultCode   := out_iFaultCode;
+      inout_udMotorData.rSetSpeed    := in_rSetSpeed;
+      inout_udMotorData.rActSpeed    := out_rActSpeed;
+      inout_udMotorData.tRuntime     := s_dRunSecs;
+      inout_udMotorData.diStartCount := s_nStartCount;
+      out_nErrorCount                := s_nErrorCount;
+
+   END_REGION
+
+
+END_FUNCTION_BLOCK
+
+
+// ============================================================================
+// Multi-Instance-Beispiel — OB1-Aufrufmuster (RD10: Conveyor01 / Conveyor02)
+// ============================================================================
+// Im OB1 (projektspezifische Verdrahtung — Tag-Namen anpassen):
+//
+//   "FB_Motor_Conveyor_DB_Mot_Conv01"(
+//       in_bEnable      := TRUE,
+//       in_bStartCmd    := "MOT_CV01_001_START",     // → I-Tag (Taste Start)
+//       in_bStopCmd     := "DB_HMI".bConv01_Stop,
+//       in_bResetCmd    := "DB_HMI".bConv01_Reset,
+//       in_bSafetyOK    := "F_DB_EStop".bQ,           // F-PLC Querverweis (RD10)
+//       in_iMode        := "DB_ModeMgr".iCurrentMode,
+//       in_rSetSpeed    := "DB_Recipe".rConv01_Speed,
+//       in_bFeedbackRun := "MOT_CV01_001_RUN",        // → I-Tag (Schütz-Hilfskontakt)
+//       in_bDriveFault  := "MOT_CV01_001_FAULT",      // → I-Tag (Antriebsstörung, NC)
+//       out_bRunning    => "MOT_CV01_001_OUT",        // → Q-Tag (Schütz Motor)
+//       out_bFault      => "DB_Status".bConv01_Fault,
+//       out_iFaultCode  => "DB_Status".iConv01_FaultCode,
+//       out_rActSpeed   => "DB_Status".rConv01_ActSpeed,  // ← realer FU-Istwert
+//       inout_udMotorData := "DB_Mot_Conv01".sMotor
+//   );
+//
+// Zweite Instanz (Conveyor02): DB_Mot_Conv02 anlegen und erneut aufrufen:
+//   "FB_Motor_Conveyor_DB_Mot_Conv02"(... in_bFeedbackRun := "MOT_CV01_002_RUN" ...);
+//
+// Vorteil Multi-Instance: EINE FB-Quelle, viele Instanzen (DB), einfache Wartung.
+// Ersetzt den alten, kopierten FC10/FC30-M-Bit-Sequencer (1995, Original FB10).
+// ============================================================================

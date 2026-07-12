@@ -1,0 +1,108 @@
+{
+  "_schema_version": "1.0.0",
+  "contract_version": "1.0.0",
+  "block": {
+    "name": "OB_DIAGNOSTIC_OB82",
+    "version": "1.0.0",
+    "type": "OB",
+    "domain": "ob",
+    "device_type": "OB82",
+    "platform": "S7_1500_TIA_V18+",
+    "source": "Factory",
+    "lifecycle": "DRAFT",
+    "description": "Diagnostic OB82. Triggered on module diagnostics event. Reads diagnostic data, sets alarm flags, logs event to diagnostic buffer DB."
+  },
+  "interface": {
+    "inputs": [],
+    "outputs": [],
+    "in_out": [],
+    "static_vars": []
+  },
+  "constraints": {
+    "mandatory_regions": [
+      "01_READ_DIAG",
+      "02_SET_ALARM",
+      "03_LOG_EVENT"
+    ],
+    "mandatory_behaviors": [
+      {
+        "id": "B-OB82-001",
+        "description": "OB82 ORGANIZATION_BLOCK declaration",
+        "check_pattern": "ORGANIZATION_BLOCK\\s+\"?OB_DIAGNOSTIC_OB82\"?|ORGANIZATION_BLOCK\\s+\"?OB82\"?|ORGANIZATION_BLOCK\\s+\"?OB 82\"?",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-OB82-002",
+        "description": "Diagnostic read region present",
+        "check_pattern": "01_READ_DIAG|READ_DIAG|Diag|diagnostic|DIAGNOSTIC",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-OB82-003",
+        "description": "Alarm flag set on diagnostic event",
+        "check_pattern": "02_SET_ALARM|SET_ALARM|alarm|Alarm|ALARM",
+        "severity": "MUST"
+      }
+    ],
+    "forbidden_patterns": [
+      "CURRENT_TIME\\(\\)"
+    ],
+    "error_codes": []
+  },
+  "gate": {
+    "checks": [
+      {
+        "id": "G-01",
+        "type": "structural",
+        "description": "Structural balance",
+        "required": true
+      },
+      {
+        "id": "G-03",
+        "type": "contract_behavior",
+        "description": "MUST behaviors",
+        "required": true
+      },
+      {
+        "id": "G-05",
+        "type": "forbidden_pattern",
+        "description": "No proprietary calls",
+        "required": true
+      },
+      {
+        "id": "G-06",
+        "type": "plcrex",
+        "description": "PLCreX optional",
+        "required": false
+      }
+    ]
+  },
+  "prompt_binding": {
+    "file": "04_AI_PROMPTS/code_gen/ob/PROMPT_OB_DIAGNOSTIC_OB82.md",
+    "version": "1.0.0",
+    "last_synced": "2026-05-30"
+  },
+  "duplicate_detection": {
+    "alternatives": [
+      "OB_RackFailure_OB86"
+    ],
+    "note": "OB82 for module diagnostics; OB86 for rack/DP failure."
+  },
+  "meta": {
+    "source": "factory",
+    "license": "MIT",
+    "safety_class": "STANDARD",
+    "target_platform": "TIA Portal V18+",
+    "compatible_tia": [
+      "V18",
+      "V19"
+    ]
+  },
+  "behaviors": [],
+  "acceptance": {
+    "contract_check": true,
+    "compile_check": true,
+    "sim_test": true,
+    "human_signoff": true
+  }
+}

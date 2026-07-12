@@ -1,0 +1,333 @@
+{
+  "_schema_version": "1.0.0",
+  "contract_version": "1.0.0",
+  "block": {
+    "name": "FB_Motor_SoftStarter",
+    "version": "1.0.0",
+    "type": "FB",
+    "domain": "motor",
+    "device_type": "SoftStarter",
+    "platform": "S7_1500_TIA_V18+",
+    "source": "Factory",
+    "lifecycle": "DRAFT",
+    "description": "Soft-starter motor control. Ramp-up/down timing, bypass contactor, restart lockout, restart counter."
+  },
+  "interface": {
+    "inputs": [
+      {
+        "name": "in_bEnable",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bReset",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bManualMode",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bStartCmd",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bStopCmd",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bFeedbackReady",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bFeedbackTOR",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bFeedbackFault",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bFeedbackOverload",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_tRampUpTimeout",
+        "iec_type": "Time",
+        "default": "T#15S",
+        "required": true
+      },
+      {
+        "name": "in_tRampDownTimeout",
+        "iec_type": "Time",
+        "default": "T#15S",
+        "required": true
+      },
+      {
+        "name": "in_tRestartLockout",
+        "iec_type": "Time",
+        "default": "T#3S",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "name": "out_bStartCmd",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bStopCmd",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bResetCmd",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bRunning",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bReady",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bError",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_wErrorCode",
+        "iec_type": "Word",
+        "default": "16#0000",
+        "required": true
+      },
+      {
+        "name": "out_nState",
+        "iec_type": "Int",
+        "default": 0,
+        "required": true
+      },
+      {
+        "name": "out_dRunHours",
+        "iec_type": "DInt",
+        "default": 0,
+        "required": true
+      }
+    ],
+    "in_out": [],
+    "static_vars": [
+      {
+        "name": "s_bResetEdgeMem",
+        "iec_type": "Bool"
+      },
+      {
+        "name": "s_bResetTrig",
+        "iec_type": "Bool"
+      },
+      {
+        "name": "s_nStep",
+        "iec_type": "Int"
+      },
+      {
+        "name": "s_tonRampUp",
+        "iec_type": "TON"
+      },
+      {
+        "name": "s_tonRampDown",
+        "iec_type": "TON"
+      },
+      {
+        "name": "s_tonLockout",
+        "iec_type": "TON"
+      }
+    ]
+  },
+  "constraints": {
+    "mandatory_regions": [
+      "01_INPUT_VALIDATION",
+      "02_STATE_MACHINE",
+      "03_OUTPUT_LOGIC",
+      "04_DIAGNOSTICS"
+    ],
+    "mandatory_behaviors": [
+      {
+        "id": "B-SS-001",
+        "description": "Reset rising edge",
+        "check_pattern": "s_bResetTrig\\s*:=\\s*.*in_bReset.*AND\\s*NOT.*s_bResetEdgeMem",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-SS-002",
+        "description": "Ramp-up timer present",
+        "check_pattern": "s_tonRampUp",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-SS-003",
+        "description": "Restart lockout timer present",
+        "check_pattern": "s_tonLockout",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-SS-004",
+        "description": "Fault feedback detected and causes error state",
+        "check_pattern": "in_bFeedbackFault",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-SS-005",
+        "description": "Error code 16#0001 present",
+        "check_pattern": "16#0001",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-SS-006",
+        "description": "Error code 16#0003 present",
+        "check_pattern": "16#0003",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-SS-007",
+        "description": "Error code 16#0010 present",
+        "check_pattern": "16#0010",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-SS-008",
+        "description": "FB name is FB_Motor_SoftStarter",
+        "check_pattern": "FUNCTION_BLOCK\\s+\"?FB_Motor_SoftStarter\"?",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-SS-009",
+        "description": "Optimized Access declared",
+        "check_pattern": "S7_Optimized_Access\\s*:=\\s*'TRUE'",
+        "severity": "MUST"
+      }
+    ],
+    "forbidden_patterns": [
+      "CURRENT_TIME\\(\\)",
+      "GET_SYSTIME\\(\\)",
+      "RUNTIME\\s*\\("
+    ],
+    "error_codes": [
+      {
+        "hex": "16#0001",
+        "meaning": "Start but soft-starter not ready"
+      },
+      {
+        "hex": "16#0003",
+        "meaning": "Motor overload"
+      },
+      {
+        "hex": "16#0006",
+        "meaning": "Soft-starter fault signal active"
+      },
+      {
+        "hex": "16#0010",
+        "meaning": "Ramp-up timeout"
+      },
+      {
+        "hex": "16#0011",
+        "meaning": "Ramp-down timeout"
+      }
+    ]
+  },
+  "gate": {
+    "checks": [
+      {
+        "id": "G-01",
+        "type": "structural",
+        "description": "Structural balance",
+        "required": true
+      },
+      {
+        "id": "G-02",
+        "type": "contract_interface",
+        "description": "Required ports",
+        "required": true
+      },
+      {
+        "id": "G-03",
+        "type": "contract_behavior",
+        "description": "MUST behaviors",
+        "required": true
+      },
+      {
+        "id": "G-04",
+        "type": "contract_error_codes",
+        "description": "Error codes in SCL",
+        "required": true
+      },
+      {
+        "id": "G-05",
+        "type": "forbidden_pattern",
+        "description": "No proprietary calls",
+        "required": true
+      },
+      {
+        "id": "G-06",
+        "type": "plcrex",
+        "description": "PLCreX optional",
+        "required": false
+      }
+    ]
+  },
+  "prompt_binding": {
+    "file": "04_AI_PROMPTS/code_gen/motor/PROMPT_MOTOR_SOFT_STARTER.md",
+    "version": "1.0.0",
+    "last_synced": "2026-05-30"
+  },
+  "duplicate_detection": {
+    "alternatives": [
+      "FB_Motor_StarDelta"
+    ],
+    "note": "SoftStarter preferred for water-hammer protection, long conveyors, or frequent starts."
+  },
+  "meta": {
+    "source": "factory",
+    "license": "MIT",
+    "safety_class": "STANDARD",
+    "target_platform": "TIA Portal V18+",
+    "compatible_tia": [
+      "V18",
+      "V19"
+    ]
+  },
+  "behaviors": [],
+  "acceptance": {
+    "contract_check": true,
+    "compile_check": true,
+    "sim_test": true,
+    "human_signoff": true
+  }
+}

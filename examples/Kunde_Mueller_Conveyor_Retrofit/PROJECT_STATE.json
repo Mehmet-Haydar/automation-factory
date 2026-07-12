@@ -1,0 +1,160 @@
+{
+  "project_id": "KMG-2026-001",
+  "project_name": "Kunde_Mueller_Conveyor_Retrofit",
+  "customer": "Kunde Müller GmbH",
+  "project_type": "retrofit",
+  "output_language": "DE",
+  "data_classification": "CONFIDENTIAL",
+  "factory_version": "v3.0.0-alpha",
+  "created": "2026-05-01",
+  "last_updated": "2026-05-17T18:08:33.905483",
+  "current_gate": 3,
+  "gates_status": {
+    "gate1_kesif": "completed",
+    "gate2_cikartim": "completed",
+    "gate3_human_review": "in_progress",
+    "gate4_validation": "pending",
+    "gate5_kod_uretimi": "pending",
+    "gate6_simulasyon": "pending",
+    "gate7_fat_sat": "pending"
+  },
+  "rd_status": {
+    "RD01_IO": {
+      "status": "DRAFT",
+      "completion_pct": 90,
+      "source": "AI_extraction"
+    },
+    "RD02_DataDict": {
+      "status": "DRAFT",
+      "completion_pct": 85,
+      "source": "AI_extraction"
+    },
+    "RD03_Flowchart": {
+      "status": "DRAFT",
+      "completion_pct": 20,
+      "source": "placeholder"
+    },
+    "RD04_Mode": {
+      "status": "DRAFT",
+      "completion_pct": 80,
+      "source": "AI_extraction + operator_interview"
+    },
+    "RD05_Safety": {
+      "status": "DRAFT_UNVERIFIED",
+      "completion_pct": 60,
+      "source": "AI_extraction",
+      "review_pending": "safety_engineer",
+      "critical_findings": [
+        "Standard PLC E-Stop (FND001 in RD14)"
+      ]
+    },
+    "RD06_Motion": {
+      "status": "DRAFT",
+      "completion_pct": 30,
+      "source": "placeholder"
+    },
+    "RD07_Timing": {
+      "status": "DRAFT",
+      "completion_pct": 30,
+      "source": "placeholder"
+    },
+    "RD08_Alarm": {
+      "status": "DRAFT",
+      "completion_pct": 75,
+      "source": "AI_extraction + WinCC_export"
+    },
+    "RD09_Comms": {
+      "status": "DRAFT",
+      "completion_pct": 40,
+      "source": "placeholder"
+    },
+    "RD10_FBSpec": {
+      "status": "DRAFT",
+      "completion_pct": 70,
+      "source": "AI_extraction"
+    },
+    "RD11_HMI": {
+      "status": "DRAFT",
+      "completion_pct": 30,
+      "source": "placeholder"
+    },
+    "RD12_UseCase": {
+      "status": "DRAFT",
+      "completion_pct": 25,
+      "source": "placeholder",
+      "workshop_pending": true
+    },
+    "RD13_Annotation": {
+      "status": "DRAFT",
+      "completion_pct": 50,
+      "source": "AI_extraction"
+    },
+    "RD14_Modernization": {
+      "status": "DRAFT",
+      "completion_pct": 80,
+      "source": "AI_extraction",
+      "decision": "GREENFIELD_RECOMMENDED",
+      "total_effort_hours": 160,
+      "hardware_cost_eur": 18000
+    }
+  },
+  "safety_engineer": {
+    "name": "Hans Becker",
+    "certification": "TÜV Süd IEC 61508",
+    "cert_number": "DE-001234"
+  },
+  "ai_assistant_used": [
+    "Claude Sonnet 4+ (extraction)",
+    "Claude Opus 4+ (safety + modernization analysis)"
+  ],
+  "next_milestones": [
+    {
+      "date": "2026-05-30",
+      "task": "RD05 safety engineer review complete"
+    },
+    {
+      "date": "2026-06-15",
+      "task": "Customer decision on Retrofit vs Greenfield"
+    },
+    {
+      "date": "2026-07-01",
+      "task": "F-PLC hardware order (8-12 week lead time)"
+    },
+    {
+      "date": "2026-09-01",
+      "task": "FAT (Factory Acceptance Test)"
+    },
+    {
+      "date": "2026-09-15",
+      "task": "SAT (Site Acceptance Test) — production handover"
+    }
+  ],
+  "activity_log": [
+    {
+      "ts": "2026-05-16 21:14:12",
+      "msg": "Excel batch: 14/14 dönüşüm"
+    },
+    {
+      "ts": "2026-05-16 21:18:06",
+      "msg": "Validate çalıştırıldı (RD=all)"
+    },
+    {
+      "ts": "2026-05-16 22:39:47",
+      "msg": "Proje analizi: %14 ilerlemiş"
+    },
+    {
+      "ts": "2026-05-16 22:40:28",
+      "msg": "Validate çalıştırıldı (RD=all)"
+    },
+    {
+      "ts": "2026-05-17 18:01:42",
+      "msg": "Pipeline brief: RD02 DataDict"
+    },
+    {
+      "ts": "2026-05-17 18:08:29",
+      "msg": "Proje analizi: %18 ilerlemiş"
+    }
+  ],
+  "platform": "S7_300",
+  "platform_confidence": "manual"
+}

@@ -1,0 +1,249 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "fb_contract.schema.json",
+  "title": "FB Contract",
+  "description": "Per-device contract: single source of truth for FB interface, constraints, and acceptance gate. Prompt, reference block, and tests all derive from this.",
+  "type": "object",
+  "required": ["contract_version", "block", "interface", "constraints", "gate"],
+  "additionalProperties": false,
+
+  "properties": {
+
+    "_schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Canonical contract schema version (1.0.0 = Fixed-FB Library release)"
+    },
+
+    "meta": {
+      "type": "object",
+      "description": "Source classification, safety class, and platform metadata — drives 3-library selection and safety red line enforcement",
+      "required": ["source", "safety_class", "license", "target_platform"],
+      "additionalProperties": false,
+      "properties": {
+        "source":          { "type": "string", "enum": ["factory", "siemens", "user"],
+                             "description": "factory=MIT/publishable; siemens=REFERENCE only; user=CONFIDENTIAL copy-on-write" },
+        "license":         { "type": "string", "enum": ["MIT", "REFERENCE", "CONFIDENTIAL"],
+                             "description": "factory->MIT; siemens->REFERENCE (never clean-room); user->CONFIDENTIAL" },
+        "safety_class":    { "type": "string", "enum": ["STANDARD", "SAFETY"],
+                             "description": "STANDARD=AI may generate/modify; SAFETY=AI must NOT generate or modify — certified vendor block only" },
+        "target_platform": { "type": "string", "description": "e.g. TIA Portal V18+" },
+        "compatible_tia":  { "type": "array", "items": { "type": "string" }, "description": "e.g. [V18, V19]" }
+      }
+    },
+
+    "behaviors": {
+      "type": "array",
+      "description": "Human-readable PLCSIM behavioral test specs. Each entry is a runnable test scenario (given/when/then). Companion to constraints.mandatory_behaviors regex patterns.",
+      "items": { "$ref": "#/definitions/plcsim_behavior" }
+    },
+
+    "acceptance": {
+      "type": "object",
+      "description": "Which acceptance gate steps apply to this block. compile_check and sim_test require TIA/PLCSIM hardware — always PENDING_TIA_VERIFY when hardware is absent.",
+      "additionalProperties": false,
+      "properties": {
+        "contract_check": { "type": "boolean", "description": "Static pin + error-code presence check — runs NOW via fb_acceptance_check.py" },
+        "compile_check":  { "type": "boolean", "description": "TIA Openness compile — DECLARE; result=PENDING_TIA_VERIFY without hardware" },
+        "sim_test":       { "type": "boolean", "description": "PLCSIM Advanced behavioral test — DECLARE; result=PENDING_TIA_VERIFY without hardware" },
+        "human_signoff":  { "type": "boolean", "description": "STANDARD=1 engineer; SAFETY=certified engineer + TÜV approval" }
+      }
+    },
+
+    "contract_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Schema version this contract was written against (e.g. 1.0.0)"
+    },
+
+    "block": {
+      "type": "object",
+      "required": ["name", "version", "type", "domain", "device_type", "platform", "source", "lifecycle"],
+      "additionalProperties": false,
+      "properties": {
+        "name":        { "type": "string", "description": "FUNCTION_BLOCK name as it appears in SCL" },
+        "version":     { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        "type":        { "type": "string", "enum": ["FB", "FC", "OB", "DB"] },
+        "domain":      { "type": "string", "enum": ["motor", "valve", "process", "system", "ob", "safety"] },
+        "device_type": { "type": "string", "description": "e.g. DOL, VFD, OnOff, PID" },
+        "platform":    { "type": "string", "description": "e.g. S7_1500_TIA_V18+" },
+        "source":      { "type": "string", "enum": ["Factory", "User", "Siemens"],
+                         "description": "Factory=bundled library; User=copy-on-write fork; Siemens=referenced only" },
+        "lifecycle":   { "type": "string",
+                         "enum": ["DRAFT", "AUTO_VERIFIED_structural", "AUTO_VERIFIED_structural_plcrex", "PENDING_TIA_VERIFY", "VALIDATED", "FROZEN"],
+                         "description": "VALIDATED requires validated_by + validated_evidence (PLCSIM run / test report path). FROZEN requires frozen_hash + frozen_by + frozen_date." },
+        "validated_by":       { "type": "string", "description": "Engineer name who promoted to VALIDATED" },
+        "validated_date":     { "type": "string", "format": "date" },
+        "validated_evidence": { "type": "string", "description": "Path or URL to PLCSIM run log / test report that proves VALIDATED status (mandatory when lifecycle=VALIDATED)" },
+        "frozen_hash": { "type": "string", "description": "SHA-256 of the frozen .scl file" },
+        "frozen_by":   { "type": "string", "description": "Engineer name who approved freeze" },
+        "frozen_date": { "type": "string", "format": "date" },
+        "description": { "type": "string" }
+      }
+    },
+
+    "interface": {
+      "type": "object",
+      "required": ["inputs", "outputs"],
+      "additionalProperties": false,
+      "properties": {
+        "inputs":       { "type": "array", "items": { "$ref": "#/definitions/port" } },
+        "outputs":      { "type": "array", "items": { "$ref": "#/definitions/port" } },
+        "in_out":       { "type": "array", "items": { "$ref": "#/definitions/port" } },
+        "static_vars":  { "type": "array", "items": { "$ref": "#/definitions/var_decl" },
+                          "description": "VAR section entries that the gate checks for (timers, edge-mem, etc.)" }
+      }
+    },
+
+    "constraints": {
+      "type": "object",
+      "required": ["mandatory_regions", "mandatory_behaviors"],
+      "additionalProperties": false,
+      "properties": {
+        "mandatory_regions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "REGION names that MUST appear in the SCL body"
+        },
+        "mandatory_behaviors": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/behavior" }
+        },
+        "forbidden_patterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Regex patterns that must NOT appear in the SCL (e.g. Siemens-only in generic block)"
+        },
+        "error_codes": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/error_code" }
+        }
+      }
+    },
+
+    "gate": {
+      "type": "object",
+      "required": ["checks"],
+      "additionalProperties": false,
+      "properties": {
+        "checks": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/gate_check" },
+          "description": "Ordered list of acceptance gate checks"
+        },
+        "plcrex_flags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Extra flags to pass to PLCreX if available"
+        }
+      }
+    },
+
+    "prompt_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Which prompt file this contract is authoritative for",
+      "properties": {
+        "file":        { "type": "string" },
+        "version":     { "type": "string" },
+        "last_synced": { "type": "string", "format": "date" }
+      }
+    },
+
+    "duplicate_detection": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Helps fb_acceptance_check.py warn on accidental duplicates",
+      "properties": {
+        "alternatives": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Other block names that serve the same function (warn if both selected)"
+        },
+        "note": { "type": "string" }
+      }
+    }
+  },
+
+  "definitions": {
+
+    "plcsim_behavior": {
+      "type": "object",
+      "description": "A single PLCSIM behavioral test scenario (human-readable, runnable by a test engineer)",
+      "required": ["id", "given", "when", "then"],
+      "additionalProperties": false,
+      "properties": {
+        "id":    { "type": "string", "description": "Short unique ID, e.g. FB_RUN_TIMEOUT" },
+        "given": { "type": "string", "description": "Precondition / initial state" },
+        "when":  { "type": "string", "description": "Trigger / event / elapsed condition" },
+        "then":  { "type": "string", "description": "Expected outputs (exact signal values)" }
+      }
+    },
+
+    "port": {
+      "type": "object",
+      "required": ["name", "iec_type", "required"],
+      "additionalProperties": false,
+      "properties": {
+        "name":        { "type": "string", "description": "Exact variable name as declared in VAR_INPUT/OUTPUT/IN_OUT" },
+        "iec_type":    { "type": "string", "description": "IEC 61131-3 data type: Bool, Int, Word, Real, Time, DInt, etc." },
+        "default":     { "description": "Initial value (any JSON scalar)" },
+        "required":    { "type": "boolean", "description": "false = optional port (e.g. reversing inputs)" },
+        "description": { "type": "string" }
+      }
+    },
+
+    "var_decl": {
+      "type": "object",
+      "required": ["name", "iec_type"],
+      "additionalProperties": false,
+      "properties": {
+        "name":     { "type": "string" },
+        "iec_type": { "type": "string" },
+        "note":     { "type": "string" }
+      }
+    },
+
+    "behavior": {
+      "type": "object",
+      "required": ["id", "description", "check_pattern", "severity"],
+      "additionalProperties": false,
+      "properties": {
+        "id":            { "type": "string", "description": "Short unique ID, e.g. B-DOL-001" },
+        "description":   { "type": "string" },
+        "check_pattern": { "type": "string",
+                           "description": "Python regex pattern searched in the SCL text as evidence of this behavior" },
+        "severity":      { "type": "string", "enum": ["MUST", "SHOULD"],
+                           "description": "MUST: gate fails if pattern absent. SHOULD: warning only." }
+      }
+    },
+
+    "error_code": {
+      "type": "object",
+      "required": ["hex", "meaning"],
+      "additionalProperties": false,
+      "properties": {
+        "hex":        { "type": "string", "pattern": "^16#[0-9A-Fa-f]{4}$" },
+        "meaning":    { "type": "string" },
+        "applies_to": { "type": "array", "items": { "type": "string" },
+                        "description": "Device types this code applies to (empty = universal)" }
+      }
+    },
+
+    "gate_check": {
+      "type": "object",
+      "required": ["id", "type", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "id":          { "type": "string" },
+        "type":        { "type": "string",
+                         "enum": ["structural", "contract_interface", "contract_behavior", "contract_error_codes", "plcrex", "forbidden_pattern"],
+                         "description": "structural=scl_validator; contract_*=fb_acceptance_check; plcrex=optional tool; forbidden_pattern=regex must NOT match" },
+        "description": { "type": "string" },
+        "required":    { "type": "boolean", "default": true,
+                         "description": "false = skip gracefully if tool unavailable (e.g. PLCreX)" }
+      }
+    }
+
+  }
+}

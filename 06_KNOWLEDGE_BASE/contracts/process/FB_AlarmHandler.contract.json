@@ -1,0 +1,281 @@
+{
+  "_schema_version": "1.0.0",
+  "contract_version": "1.0.0",
+  "block": {
+    "name": "FB_AlarmHandler",
+    "version": "1.0.0",
+    "type": "FB",
+    "domain": "process",
+    "device_type": "AlarmHandler",
+    "platform": "S7_1500_TIA_V18+",
+    "source": "Factory",
+    "lifecycle": "DRAFT",
+    "description": "Single alarm channel handler. Rising/falling edge detection, latching, acknowledge, priority classification, repeat suppression."
+  },
+  "interface": {
+    "inputs": [
+      {
+        "name": "in_bEnable",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bReset",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bAlarmTrigger",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bAcknowledge",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_nPriority",
+        "iec_type": "Int",
+        "default": 1,
+        "required": true,
+        "description": "1=low, 2=medium, 3=high, 4=critical"
+      },
+      {
+        "name": "in_bLatching",
+        "iec_type": "Bool",
+        "default": true,
+        "required": true,
+        "description": "TRUE=latched (stays until ACK+reset), FALSE=auto-clear"
+      },
+      {
+        "name": "in_tDeglitch",
+        "iec_type": "Time",
+        "default": "T#100MS",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "name": "out_bAlarmActive",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bAlarmAcked",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bAlarmLatched",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bNewAlarm",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true,
+        "description": "Rising edge of alarm (one-shot)"
+      },
+      {
+        "name": "out_dAlarmCount",
+        "iec_type": "DInt",
+        "default": 0,
+        "required": true
+      },
+      {
+        "name": "out_bReady",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bError",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_wErrorCode",
+        "iec_type": "Word",
+        "default": "16#0000",
+        "required": true
+      },
+      {
+        "name": "out_nState",
+        "iec_type": "Int",
+        "default": 0,
+        "required": true
+      }
+    ],
+    "in_out": [],
+    "static_vars": [
+      {
+        "name": "s_bResetEdgeMem",
+        "iec_type": "Bool"
+      },
+      {
+        "name": "s_bResetTrig",
+        "iec_type": "Bool"
+      },
+      {
+        "name": "s_bTriggerEdgeMem",
+        "iec_type": "Bool"
+      },
+      {
+        "name": "s_bAckEdgeMem",
+        "iec_type": "Bool"
+      },
+      {
+        "name": "s_nStep",
+        "iec_type": "Int"
+      },
+      {
+        "name": "s_tonDeglitch",
+        "iec_type": "TON"
+      }
+    ]
+  },
+  "constraints": {
+    "mandatory_regions": [
+      "01_INPUT_VALIDATION",
+      "02_STATE_MACHINE",
+      "03_OUTPUT_LOGIC",
+      "04_DIAGNOSTICS"
+    ],
+    "mandatory_behaviors": [
+      {
+        "id": "B-AH-001",
+        "description": "Reset rising edge",
+        "check_pattern": "s_bResetTrig\\s*:=\\s*.*in_bReset.*AND\\s*NOT.*s_bResetEdgeMem",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-AH-002",
+        "description": "Alarm trigger rising edge detected",
+        "check_pattern": "s_bTriggerEdgeMem|TriggerEdge|TriggerMem",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-AH-003",
+        "description": "Acknowledge rising edge detected",
+        "check_pattern": "s_bAckEdgeMem|AckEdge|AckMem",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-AH-004",
+        "description": "Deglitch timer present",
+        "check_pattern": "s_tonDeglitch|Deglitch|deglitch",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-AH-005",
+        "description": "Latching behavior conditional",
+        "check_pattern": "in_bLatching|Latching|latching",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-AH-006",
+        "description": "Error code 16#0001 present",
+        "check_pattern": "16#0001",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-AH-007",
+        "description": "FB name is FB_AlarmHandler",
+        "check_pattern": "FUNCTION_BLOCK\\s+\"?FB_AlarmHandler\"?",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-AH-008",
+        "description": "Optimized Access declared",
+        "check_pattern": "S7_Optimized_Access\\s*:=\\s*'TRUE'",
+        "severity": "MUST"
+      }
+    ],
+    "forbidden_patterns": [
+      "CURRENT_TIME\\(\\)",
+      "GET_SYSTIME\\(\\)"
+    ],
+    "error_codes": [
+      {
+        "hex": "16#0001",
+        "meaning": "Invalid priority value (not 1-4)"
+      }
+    ]
+  },
+  "gate": {
+    "checks": [
+      {
+        "id": "G-01",
+        "type": "structural",
+        "description": "Structural balance",
+        "required": true
+      },
+      {
+        "id": "G-02",
+        "type": "contract_interface",
+        "description": "Required ports",
+        "required": true
+      },
+      {
+        "id": "G-03",
+        "type": "contract_behavior",
+        "description": "MUST behaviors",
+        "required": true
+      },
+      {
+        "id": "G-04",
+        "type": "contract_error_codes",
+        "description": "Error codes in SCL",
+        "required": true
+      },
+      {
+        "id": "G-05",
+        "type": "forbidden_pattern",
+        "description": "No proprietary calls",
+        "required": true
+      },
+      {
+        "id": "G-06",
+        "type": "plcrex",
+        "description": "PLCreX optional",
+        "required": false
+      }
+    ]
+  },
+  "prompt_binding": {
+    "file": "04_AI_PROMPTS/code_gen/process/PROMPT_PROCESS_ALARM_HANDLER.md",
+    "version": "1.0.0",
+    "last_synced": "2026-05-30"
+  },
+  "duplicate_detection": {
+    "alternatives": [],
+    "note": "One instance per alarm channel. For batch alarms use an array of instances."
+  },
+  "meta": {
+    "source": "factory",
+    "license": "MIT",
+    "safety_class": "STANDARD",
+    "target_platform": "TIA Portal V18+",
+    "compatible_tia": [
+      "V18",
+      "V19"
+    ]
+  },
+  "behaviors": [],
+  "acceptance": {
+    "contract_check": true,
+    "compile_check": true,
+    "sim_test": true,
+    "human_signoff": true
+  }
+}

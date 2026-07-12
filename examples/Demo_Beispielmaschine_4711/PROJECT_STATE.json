@@ -1,0 +1,17 @@
+{
+  "project_name": "Demo_Beispielmaschine_4711",
+  "project_type": "retrofit",
+  "customer": "Maschinenbau Beispiel GmbH (fictional)",
+  "data_classification": "PUBLIC",
+  "output_language": "DE",
+  "target_platform": "S7-1500",
+  "target_tia_version": "V19",
+  "plc_name": "PLC_1",
+  "gate": 4,
+  "note": "Synthetic demo project - every name, number and signal is fictional.",
+  "tia_project_path": "C:\\Users\\ENGINEER\\Documents\\Automatisierung\\OpennessTest\\OpennessTest.ap19",
+  "last_validation": {
+    "errors": 0,
+    "scope": "compile"
+  }
+}

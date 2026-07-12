@@ -1,0 +1,7 @@
+DATA_BLOCK "iDB_Watchdog"
+{ S7_Optimized_Access := 'TRUE' }
+"FB_WATCHDOG"
+
+BEGIN
+
+END_DATA_BLOCK

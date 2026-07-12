@@ -1,0 +1,83 @@
+// ============================================================================
+// OB_MAIN_OB1 — Main Cyclic Organization Block (Template)
+// Source    : Factory Library
+// Contract  : 06_KNOWLEDGE_BASE/contracts/ob/OB_Main_OB1.contract.json
+// Lifecycle : AUTO_VERIFIED_structural | PENDING_TIA_VERIFY
+// NOTE      : Generated per project — structure is standardized, FB calls vary.
+// STATUS    : STUB_ONLY — all REGION bodies are empty skeletons. Fill <PROJECT_*> placeholders.
+// PROJECT   : <project_name>
+// Platform  : <platform>
+// Version   : 1.0
+// ============================================================================
+// ============================================================
+// *** SAFETY NOTICE ***
+// This function block is NOT designed or validated for use in
+// Safety Instrumented Systems (SIS) per IEC 61508 / IEC 62061,
+// or as a safety-related control function per ISO 13849 (PLr).
+// For functional safety applications, use only certified safety
+// hardware or F-CPU safety functions. A qualified safety engineer
+// must review all applications involving process or personnel safety.
+// ============================================================
+
+ORGANIZATION_BLOCK "OB_MAIN_OB1"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 1.0
+
+   VAR_TEMP
+      tmp_iTemp : Int;   // Generic temp variable
+   END_VAR
+
+
+BEGIN
+
+   //===========================================================================
+   // REGION: 01_SAFETY_CHECK  (HIGHEST PRIORITY — must be first)
+   // Purpose: Check safety system state. If not OK → immediately return.
+   //===========================================================================
+   REGION 01_SAFETY_CHECK
+      // <PROJECT_SAFETY_CHECK>
+      // Example: IF NOT "DB_Safety".bEStopOK THEN RETURN; END_IF;
+   END_REGION
+
+
+   //===========================================================================
+   // REGION: 02_MODE_MANAGER
+   // Purpose: Update machine mode (OMAC PackML)
+   //===========================================================================
+   REGION 02_MODE_MANAGER
+      // <PROJECT_MODE_CALL>
+      // Example: "FB_ModeManager_DB"(in_bEnable := TRUE, ...);
+   END_REGION
+
+
+   //===========================================================================
+   // REGION: 03_ALARMS
+   // Purpose: Process all alarm handler instances
+   //===========================================================================
+   REGION 03_ALARMS
+      // <PROJECT_ALARM_CALLS>
+   END_REGION
+
+
+   //===========================================================================
+   // REGION: 04_PROCESS_CALLS
+   // Purpose: Call all device FBs (motors, valves, PIDs, sequences)
+   //===========================================================================
+   REGION 04_PROCESS_CALLS
+      // <PROJECT_DEVICE_CALLS>
+      // Ordered by process priority. Example:
+      // "FB_MOTOR_DOL_Conv01"(in_bEnable := TRUE, ...);
+      // "FB_VALVE_ONOFF_Inlet"(in_bEnable := TRUE, ...);
+   END_REGION
+
+
+   //===========================================================================
+   // REGION: 05_DIAGNOSTICS
+   // Purpose: Watchdog, diagnostics, HMI sync
+   //===========================================================================
+   REGION 05_DIAGNOSTICS
+      // <PROJECT_DIAGNOSTICS>
+   END_REGION
+
+
+END_ORGANIZATION_BLOCK

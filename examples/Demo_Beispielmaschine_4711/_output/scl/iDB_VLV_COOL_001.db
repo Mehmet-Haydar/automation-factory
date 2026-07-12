@@ -1,0 +1,7 @@
+DATA_BLOCK "iDB_VLV_COOL_001"
+{ S7_Optimized_Access := 'TRUE' }
+"FB_VALVE_ONOFF"
+
+BEGIN
+
+END_DATA_BLOCK

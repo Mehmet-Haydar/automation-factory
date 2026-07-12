@@ -1,0 +1,241 @@
+// ============================================================================
+// FB_Motor_StarDelta — Star-Delta Motor Starter
+// Source    : Factory Library (AUTOMATION_FACTORY v3.1.0+)
+// Contract  : 06_KNOWLEDGE_BASE/contracts/motor/FB_Motor_StarDelta.contract.json
+// Lifecycle : AUTO_VERIFIED_structural | PENDING_TIA_VERIFY
+// ----------------------------------------------------------------------------
+// CHANGELOG:
+//   v3.1.1 (2026-06-09): SAFETY FIX — Step 10 and Step 20 stop-guard IF blocks
+//     restructured with ELSE so that unconditional output assignments cannot
+//     overwrite (re-energise) contactors in the same scan cycle after a stop
+//     command or enable loss.  Previously the guard set outputs FALSE and
+//     s_nStep := 0, but the code below the END_IF immediately wrote
+//     out_bMain/out_bStar := TRUE with no RETURN/ELSE, meaning the motor
+//     remained energised for one extra scan.  Now the normal-run logic lives
+//     inside ELSE, making it unreachable when the guard fires.
+// ============================================================================
+// ============================================================
+// *** SAFETY NOTICE ***
+// This function block is NOT designed or validated for use in
+// Safety Instrumented Systems (SIS) per IEC 61508 / IEC 62061,
+// or as a safety-related control function per ISO 13849 (PLr).
+// For functional safety applications, use only certified safety
+// hardware or F-CPU safety functions. A qualified safety engineer
+// must review all applications involving process or personnel safety.
+// ============================================================
+
+FUNCTION_BLOCK "FB_Motor_StarDelta"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 1.0
+
+   VAR_INPUT
+      in_bEnable           : Bool := FALSE;
+      in_bReset            : Bool := FALSE;
+      in_bManualMode       : Bool := FALSE;
+      in_bStartCmd         : Bool := FALSE;
+      in_bStopCmd          : Bool := FALSE;
+      in_bManualStart      : Bool := FALSE;
+      in_bManualStop       : Bool := FALSE;
+      in_bFeedbackMain     : Bool := FALSE;
+      in_bFeedbackDelta    : Bool := FALSE;   // DELTA contactor NC aux contact (TRUE = delta CLOSED = energised)
+      in_bFeedbackStar     : Bool := FALSE;   // STAR contactor NC aux contact (TRUE = star OPEN = safe)
+      in_bFeedbackOverload : Bool := FALSE;
+      in_tStarDuration     : Time := T#5S;
+      in_tDeadTime         : Time := T#100MS;
+      in_tStartTimeout     : Time := T#3S;
+      in_tStopTimeout      : Time := T#5S;
+   END_VAR
+
+   VAR_OUTPUT
+      out_bMain        : Bool := FALSE;
+      out_bStar        : Bool := FALSE;
+      out_bDelta       : Bool := FALSE;
+      out_bReady       : Bool := FALSE;
+      out_bError       : Bool := FALSE;
+      out_wErrorCode   : Word := 16#0000;
+      out_nState       : Int  := 0;
+      out_dRunHours    : DInt := 0;
+   END_VAR
+
+   VAR
+      s_bResetEdgeMem : Bool := FALSE;
+      s_bResetTrig    : Bool := FALSE;
+      s_nStep         : Int  := 0;
+      s_nStepLast     : Int  := 0;
+      s_tonStarDur    : TON;
+      s_tonDeadTime   : TON;
+      s_tonStartTO    : TON;
+      s_tonStopTO     : TON;
+      s_tonRunTick    : TON;                 // 1-second tick for scan-independent run-time counting
+      s_nErrorCount   : DInt := 0;
+   END_VAR
+
+   VAR_TEMP
+      t_bStartEnable : Bool;
+   END_VAR
+
+
+BEGIN
+
+   REGION 01_INPUT_VALIDATION
+      s_bResetTrig    := in_bReset AND NOT s_bResetEdgeMem;
+      s_bResetEdgeMem := in_bReset;
+
+      IF s_bResetTrig THEN
+         out_bError := FALSE; out_wErrorCode := 16#0000;
+         IF s_nStep = 99 THEN s_nStep := 0; END_IF;
+      END_IF;
+
+      IF NOT in_bEnable THEN
+         out_bMain := FALSE; out_bStar := FALSE; out_bDelta := FALSE;
+         out_bReady := FALSE; s_nStep := 0; RETURN;
+      END_IF;
+
+      IF in_bFeedbackOverload THEN
+         out_bMain := FALSE; out_bStar := FALSE; out_bDelta := FALSE;
+         IF NOT out_bError THEN
+            out_bError := TRUE; out_wErrorCode := 16#0003;   // 16#0003 = Overload
+            s_nErrorCount := s_nErrorCount + 1;
+         END_IF;
+         s_nStep := 99;
+      END_IF;
+
+      // STAR and DELTA mutual exclusion check
+      IF out_bStar AND out_bDelta THEN
+         out_bMain := FALSE; out_bStar := FALSE; out_bDelta := FALSE;
+         out_bError := TRUE; out_wErrorCode := 16#0010;   // 16#0010 = STAR+DELTA overlap
+         s_nErrorCount := s_nErrorCount + 1;
+         s_nStep := 99;
+      END_IF;
+   END_REGION
+
+
+   REGION 02_STATE_MACHINE
+      IF in_bManualMode THEN
+         t_bStartEnable := in_bManualStart AND NOT in_bManualStop;
+      ELSE
+         t_bStartEnable := in_bStartCmd AND NOT in_bStopCmd;
+      END_IF;
+
+      CASE s_nStep OF
+
+         0:  // IDLE
+            out_bReady := TRUE;
+            out_bMain := FALSE; out_bStar := FALSE; out_bDelta := FALSE;
+            s_tonStarDur(IN := FALSE, PT := in_tStarDuration);
+            s_tonDeadTime(IN := FALSE, PT := in_tDeadTime);
+            s_tonStartTO(IN := FALSE, PT := in_tStartTimeout);
+            s_tonRunTick(IN := FALSE, PT := T#1S);
+            IF t_bStartEnable AND NOT out_bError THEN s_nStep := 10; END_IF;
+
+         10: // STAR phase — main + star contactors ON
+            IF NOT t_bStartEnable OR NOT in_bEnable THEN
+               // Stop or disable: de-energise immediately — ELSE below is skipped this scan
+               out_bMain := FALSE; out_bStar := FALSE; out_bDelta := FALSE;
+               s_nStep := 0;
+            ELSE
+               // Normal run path — only reached when start is still commanded
+               out_bMain := TRUE; out_bStar := TRUE; out_bDelta := FALSE;
+               s_tonStarDur(IN := TRUE, PT := in_tStarDuration);
+               s_tonStartTO(IN := NOT in_bFeedbackMain, PT := in_tStartTimeout);
+
+               IF s_tonStartTO.Q AND NOT in_bFeedbackMain THEN
+                  out_bMain := FALSE; out_bStar := FALSE;
+                  out_bError := TRUE; out_wErrorCode := 16#0001;   // 16#0001 = No main feedback
+                  s_nErrorCount := s_nErrorCount + 1;
+                  s_nStep := 99;
+               END_IF;
+
+               IF s_tonStarDur.Q THEN
+                  out_bStar := FALSE; s_nStep := 15;   // Star done → wait for star contactor to open
+               END_IF;
+            END_IF;
+
+         15: // STAR_OPENING — wait for star contactor to physically open before dead time
+            out_bMain := TRUE; out_bStar := FALSE; out_bDelta := FALSE;
+            s_tonDeadTime(IN := in_bFeedbackStar, PT := in_tDeadTime);
+            IF in_bFeedbackStar AND s_tonDeadTime.Q THEN
+               s_nStep := 20;
+            END_IF;
+            s_tonStartTO(IN := NOT in_bFeedbackStar, PT := in_tStartTimeout);
+            IF s_tonStartTO.Q THEN
+               out_bMain := FALSE;
+               out_bError := TRUE; out_wErrorCode := 16#0020;   // 16#0020 = Star contactor stuck closed
+               s_nErrorCount := s_nErrorCount + 1;
+               s_nStep := 99;
+            END_IF;
+
+         20: // DEAD TIME — star off, delta not yet on
+            IF NOT t_bStartEnable OR NOT in_bEnable THEN
+               // Stop or disable: de-energise immediately — ELSE below is skipped this scan
+               out_bMain := FALSE; out_bStar := FALSE; out_bDelta := FALSE;
+               s_nStep := 0;
+            ELSE
+               // Normal run path — only reached when start is still commanded
+               out_bMain := TRUE; out_bStar := FALSE; out_bDelta := FALSE;
+               s_tonDeadTime(IN := TRUE, PT := in_tDeadTime);
+               IF s_tonDeadTime.Q THEN s_nStep := 30; END_IF;
+            END_IF;
+
+         30: // DELTA running
+            out_bMain := TRUE; out_bStar := FALSE; out_bDelta := TRUE;
+            s_tonStarDur(IN := FALSE, PT := in_tStarDuration);
+            s_tonDeadTime(IN := FALSE, PT := in_tDeadTime);
+            // Run-seconds counter: TON-based — scan-cycle independent
+            s_tonRunTick(IN := TRUE, PT := T#1S);
+            IF s_tonRunTick.Q THEN
+               out_dRunHours := out_dRunHours + 1;
+               s_tonRunTick(IN := FALSE, PT := T#1S);
+            END_IF;
+
+            // Transition timeout check (delta feedback not arriving)
+            IF NOT in_bFeedbackDelta THEN
+               s_tonStartTO(IN := TRUE, PT := in_tStartTimeout);
+               IF s_tonStartTO.Q THEN
+                  out_bError := TRUE; out_wErrorCode := 16#0011;   // 16#0011 = Transition timeout
+                  s_nErrorCount := s_nErrorCount + 1;
+                  s_nStep := 99;
+               END_IF;
+            ELSE
+               s_tonStartTO(IN := FALSE, PT := in_tStartTimeout);
+            END_IF;
+
+            IF NOT t_bStartEnable OR NOT in_bEnable THEN
+               out_bMain := FALSE; out_bDelta := FALSE;
+               s_nStep := 35;   // Verify delta contactor opens before returning to IDLE
+            END_IF;
+
+         35: // DELTA_STOPPING — verify delta contactor opens before returning to IDLE
+            out_bMain := FALSE; out_bDelta := FALSE;
+            s_tonStopTO(IN := in_bFeedbackDelta, PT := in_tStopTimeout);
+            IF s_tonStopTO.Q THEN
+               out_bError := TRUE; out_wErrorCode := 16#0012;   // 16#0012 = Delta contactor welded
+               s_nErrorCount := s_nErrorCount + 1;
+               s_nStep := 99;
+            ELSIF NOT in_bFeedbackDelta THEN
+               s_nStep := 0;   // Delta confirmed open
+            END_IF;
+
+         99: // FAULT
+            out_bMain := FALSE; out_bStar := FALSE; out_bDelta := FALSE;
+            out_bReady := FALSE;
+
+      ELSE
+         out_wErrorCode := 16#FFFF; out_bError := TRUE; s_nStep := 99;
+      END_CASE;
+
+      IF s_nStep <> s_nStepLast THEN s_nStepLast := s_nStep; END_IF;
+   END_REGION
+
+
+   REGION 03_OUTPUT_LOGIC
+      out_nState := s_nStep;
+   END_REGION
+
+
+   REGION 04_DIAGNOSTICS
+      // s_nErrorCount tracks total fault events for HMI
+   END_REGION
+
+
+END_FUNCTION_BLOCK

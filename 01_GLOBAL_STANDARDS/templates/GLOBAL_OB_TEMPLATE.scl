@@ -1,0 +1,28 @@
+(*
+================================================================================
+  GLOBAL_OB_TEMPLATE.scl
+  Title          : Global OB Template (SCL)
+  Version        : 0.1.0
+  Last validated : 2026-05
+  Status         : STUB
+  Applies to     : both
+  Prerequisites  : GLOBAL_NAMING_STANDARD.md, GLOBAL_FB_TEMPLATE.scl
+================================================================================
+*)
+
+(* TODO: This file will be filled in per the Sprint plan.
+
+Will include:
+ORGANIZATION_BLOCK skeleton:
+  - Header (comment, version)
+  - VAR_TEMP (Start/Diag info)
+  - REGION 01_PRECONDITIONS (mode checks)
+  - REGION 02_FB_CALLS (instance calls, in order)
+  - REGION 03_DIAGNOSTICS (cycle time, error count)
+  - REGION 04_HMI_INTERFACE (summary info to the HMI)
+OB type parameter: separate variants for OB1 (cyclic), OB100 (startup), OB30 (cyclic interrupt).
+
+To fill in, open a new chat:
+  - Paste PROJECT_VISION.md, SKELETON_BLUEPRINT.md, PROGRESS_TRACKER.md
+  - Open this file, fill in the content
+*)

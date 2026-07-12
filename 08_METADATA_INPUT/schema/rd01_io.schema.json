@@ -1,0 +1,84 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "rd01_io.schema.json",
+  "title": "RD01 — IO List",
+  "description": "Per-project IO list validation schema. Spec: MDSCHEMA_RAWDATA_01_IO.md",
+  "type": "object",
+  "required": ["project_id", "Signals"],
+  "properties": {
+    "project_id": { "type": "string", "minLength": 1 },
+    "project_name": { "type": "string" },
+    "filled_by": { "type": "string" },
+    "filled_at": { "type": "string", "format": "date" },
+    "Signals": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "Tag", "Address", "Type", "Direction", "Equipment",
+          "Description", "SafetyRelated", "SourceModule", "Status"
+        ],
+        "properties": {
+          "Tag": {
+            "type": "string",
+            "pattern": "^[A-Z]+_[A-Z0-9]+_\\d{3}(_[A-Z]+)?$"
+          },
+          "Address": {
+            "type": "string",
+            "pattern": "^%?[IQME][BWDX]?\\d+(\\.\\d+)?$|^[A-Z]+\\d+(\\.\\d+)?$"
+          },
+          "Type": {
+            "type": "string",
+            "enum": ["BOOL", "BYTE", "WORD", "DWORD", "INT", "DINT", "REAL", "TIME", "STRING"]
+          },
+          "Direction": {
+            "type": "string",
+            "enum": ["DI", "DO", "AI", "AO"]
+          },
+          "Equipment": { "type": "string" },
+          "Description": { "type": "string", "minLength": 1 },
+          "NormalState": {
+            "type": "string",
+            "enum": ["NO", "NC", ""]
+          },
+          "EngUnit": { "type": "string" },
+          "RangeMin": { "type": ["number", "string"] },
+          "RangeMax": { "type": ["number", "string"] },
+          "SafetyRelated": {
+            "type": "string",
+            "enum": ["Y", "N"]
+          },
+          "SourceModule": { "type": "string" },
+          "OldTag": { "type": "string" },
+          "Notes": { "type": "string" },
+          "Status": {
+            "type": "string",
+            "enum": ["Active", "Inactive", "Spare"]
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": { "Direction": { "enum": ["AI", "AO"] } }
+            },
+            "then": {
+              "required": ["EngUnit", "RangeMin", "RangeMax"]
+            }
+          }
+        ],
+        "additionalProperties": true
+      }
+    },
+    "Unknowns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "OldTag": { "type": "string" },
+          "Reason": { "type": "string" }
+        }
+      }
+    }
+  }
+}

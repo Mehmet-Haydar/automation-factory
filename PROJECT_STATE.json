@@ -1,0 +1,4 @@
+{
+  "data_classification": "PUBLIC",
+  "_note": "Framework template repository root — PUBLIC by design. Required so the C4 data-classification guard (data_classification_guard.check_ai_send) resolves FACTORY_ROOT to PUBLIC. Without it the guard fail-closes to CONFIDENTIAL and blocks public operations (e.g. ingest_device datasheet import) when no customer project is open. This is NOT a customer project; real projects live under examples/ or the configured projects_folder."
+}

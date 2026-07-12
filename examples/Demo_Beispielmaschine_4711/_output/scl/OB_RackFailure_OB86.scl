@@ -1,0 +1,65 @@
+// ============================================================================
+// OB_RackFailure_OB86 — Rack/DP Failure Organization Block
+// Source    : Factory Library
+// Contract  : 06_KNOWLEDGE_BASE/contracts/ob/OB_RackFailure_OB86.contract.json
+// Lifecycle : AUTO_VERIFIED_structural | PENDING_TIA_VERIFY
+// STATUS    : STUB_ONLY — project engineer must fill <PROJECT_*> placeholders.
+//             OB86 start-info (OB86_MDL_ADDR, OB86_EV_CLASS) declared in VAR_TEMP.
+// ============================================================================
+// ============================================================
+// *** SAFETY NOTICE ***
+// This function block is NOT designed or validated for use in
+// Safety Instrumented Systems (SIS) per IEC 61508 / IEC 62061,
+// or as a safety-related control function per ISO 13849 (PLr).
+// For functional safety applications, use only certified safety
+// hardware or F-CPU safety functions. A qualified safety engineer
+// must review all applications involving process or personnel safety.
+// ============================================================
+
+ORGANIZATION_BLOCK "OB_RackFailure_OB86"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 1.0
+
+   VAR_TEMP
+      tmp_wStationAddr : Word;   // Failing station address
+   END_VAR
+
+
+BEGIN
+
+   //===========================================================================
+   // REGION: 01_READ_EVENT
+   // Purpose: Read the rack/DP failure event data
+   //===========================================================================
+   REGION 01_READ_EVENT
+      // <PROJECT_READ_EVENT> — start-info skeleton (project-adapt VAR_TEMP names)
+      // TIA Portal exposes these as OB local variables in VAR_TEMP:
+      //   OB86_MDL_ADDR : Word;   // Failing station I/O address
+      //   OB86_EV_CLASS : Byte;   // 16#38 = coming (failure), 16#39 = going (recovery)
+      // Example read:
+      //   tmp_wStationAddr := OB86_MDL_ADDR;
+   END_REGION
+
+
+   //===========================================================================
+   // REGION: 02_SET_COMMS_FAULT
+   // Purpose: Set global communication fault flag in system DB
+   //===========================================================================
+   REGION 02_SET_COMMS_FAULT
+      // <PROJECT_SET_COMMS_FAULT>
+      // Example: "DB_System".bCommsFault := TRUE;
+      //          "DB_System".wFaultStation := tmp_wStationAddr;
+   END_REGION
+
+
+   //===========================================================================
+   // REGION: 03_LOG_STATION
+   // Purpose: Log the failing station to the diagnostic buffer
+   //===========================================================================
+   REGION 03_LOG_STATION
+      // <PROJECT_LOG_STATION>
+      // Increment comms fault counter, store station address and event class
+   END_REGION
+
+
+END_ORGANIZATION_BLOCK

@@ -1,0 +1,7 @@
+DATA_BLOCK "iDB_ModeManager"
+{ S7_Optimized_Access := 'TRUE' }
+"FB_ModeManager"
+
+BEGIN
+
+END_DATA_BLOCK

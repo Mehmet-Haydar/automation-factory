@@ -1,0 +1,191 @@
+(*
+================================================================================
+  GLOBAL_FB_TEMPLATE.scl
+  --------------------------------------------------------------------------------
+  Standard Function Block skeleton — Automation Factory
+  Platform     : TIA Portal V18+
+  Version      : 1.0.1
+  Last validated: 2026-06
+  Changelog    : v1.0.1 — Fix error counter: count on rising edge of out_bError
+                 only (s_bErrorEdgeMem guard), not every scan while error active.
+
+  USAGE:
+    1. Use this file as the template for a new FB.
+    2. Fill in the <FB_NAME>, <DOMAIN>, <FUNCTION> placeholders.
+    3. Follow GLOBAL_NAMING_STANDARD.md.
+    4. Extend the sections per project needs, but keep the structure.
+
+  SECTIONS THE STRUCTURE MUST KEEP:
+    - Header (comment block)
+    - Interface (VAR_INPUT / VAR_OUTPUT / VAR_IN_OUT / VAR / VAR_TEMP)
+    - Region: 01_INPUT_VALIDATION
+    - Region: 02_STATE_MACHINE
+    - Region: 03_OUTPUT_LOGIC
+    - Region: 04_DIAGNOSTICS
+================================================================================
+*)
+
+FUNCTION_BLOCK "FB_<DOMAIN>_<FUNCTION>"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 1.0
+
+   VAR_INPUT
+      in_bEnable          : Bool := FALSE;        // Enables the FB
+      in_bReset           : Bool := FALSE;        // Fault reset (rising edge)
+      in_bManualMode      : Bool := FALSE;        // Manual mode
+      // <PROJECT_INPUTS> — Add project-specific inputs here
+   END_VAR
+
+   VAR_OUTPUT
+      out_bReady          : Bool := FALSE;        // FB ready
+      out_bDone           : Bool := FALSE;        // Operation completed
+      out_bError          : Bool := FALSE;        // Error present
+      out_wErrorCode      : Word := 16#0000;      // Error code
+      out_nState          : Int  := 0;            // Current state number
+      // <PROJECT_OUTPUTS> — Add project-specific outputs here
+   END_VAR
+
+   VAR_IN_OUT
+      // <PROJECT_INOUT> — UDT references here
+   END_VAR
+
+   VAR
+      // --- State Machine ---
+      s_nStep             : Int := 0;             // Current step
+      s_nStepLast         : Int := 0;             // Previous step (transition detection)
+
+      // --- Edge Detection ---
+      s_bResetEdgeMem     : Bool := FALSE;        // Reset rising edge memory
+      s_bResetTrig        : Bool := FALSE;        // Reset rising edge trigger
+      s_bErrorEdgeMem     : Bool := FALSE;        // Error rising edge memory (counter guard)
+
+      // --- Timers ---
+      s_tonStepTime       : TON;                  // Step duration tracking
+      s_tStepElapsed      : Time;                 // Elapsed time in the step
+
+      // --- Diagnostics ---
+      s_nCycleCount       : DInt := 0;            // Total cycle count
+      s_nErrorCount       : DInt := 0;            // Total error count
+      s_dtLastError       : DTL;                  // Last error timestamp
+   END_VAR
+
+   VAR_TEMP
+      t_bAnyError         : Bool;                 // Temp: is there any error
+      t_rCalc             : Real;                 // Temp calculation
+   END_VAR
+
+
+BEGIN
+
+   //=============================================================================
+   // REGION: 01_INPUT_VALIDATION
+   // Purpose: Validate inputs, perform edge detection.
+   //=============================================================================
+   REGION 01_INPUT_VALIDATION
+
+      // Reset rising edge detection
+      s_bResetTrig := #in_bReset AND NOT #s_bResetEdgeMem;
+      s_bResetEdgeMem := #in_bReset;
+
+      // If the FB is disabled, reset the state
+      IF NOT #in_bEnable THEN
+         #s_nStep := 0;
+         #out_bDone := FALSE;
+      END_IF;
+
+      // If reset is triggered, clear the error
+      IF #s_bResetTrig THEN
+         #out_bError := FALSE;
+         #out_wErrorCode := 16#0000;
+         IF #s_nStep = 99 THEN  // Exit the error state
+            #s_nStep := 0;
+         END_IF;
+      END_IF;
+
+   END_REGION
+
+
+   //=============================================================================
+   // REGION: 02_STATE_MACHINE
+   // Purpose: Run the main business logic via a state machine.
+   //=============================================================================
+   REGION 02_STATE_MACHINE
+
+      CASE #s_nStep OF
+
+         0:  // IDLE — Waiting to start
+            #out_bReady := #in_bEnable;
+            #out_bDone := FALSE;
+            IF #in_bEnable AND NOT #out_bError THEN
+               #s_nStep := 10;
+            END_IF;
+
+         10: // INIT — Initialization
+            // <PROJECT_LOGIC_INIT>
+            #s_nStep := 20;
+
+         20: // RUNNING — Main work
+            // <PROJECT_LOGIC_RUN>
+            #s_nStep := 30;
+
+         30: // FINISHING — Completion
+            // <PROJECT_LOGIC_FINISH>
+            #out_bDone := TRUE;
+            #s_nCycleCount := #s_nCycleCount + 1;
+            #s_nStep := 0;  // Return to IDLE
+
+         99: // ERROR — Error state (waiting for reset)
+            #out_bReady := FALSE;
+            // For reset, see 01_INPUT_VALIDATION
+
+      ELSE
+         // Undefined state — force into error
+         #out_wErrorCode := 16#FFFF;
+         #out_bError := TRUE;
+         #s_nStep := 99;
+      END_CASE;
+
+      // Track step transitions
+      IF #s_nStep <> #s_nStepLast THEN
+         #s_tonStepTime(IN := FALSE, PT := T#0s);
+         #s_nStepLast := #s_nStep;
+      END_IF;
+      #s_tonStepTime(IN := TRUE, PT := T#1h);
+      #s_tStepElapsed := #s_tonStepTime.ET;
+
+   END_REGION
+
+
+   //=============================================================================
+   // REGION: 03_OUTPUT_LOGIC
+   // Purpose: Compute outputs based on the state.
+   //=============================================================================
+   REGION 03_OUTPUT_LOGIC
+
+      #out_nState := #s_nStep;
+
+      // <PROJECT_OUTPUT_MAPPING>
+
+   END_REGION
+
+
+   //=============================================================================
+   // REGION: 04_DIAGNOSTICS
+   // Purpose: Produce diagnostic data for HMI/SCADA.
+   //=============================================================================
+   REGION 04_DIAGNOSTICS
+
+      t_bAnyError := #out_bError;
+
+      // Count each error ONSET once (rising edge of out_bError), not every scan
+      // while the error persists. s_bErrorEdgeMem holds the previous-scan state.
+      IF t_bAnyError AND NOT #s_bErrorEdgeMem THEN
+         #s_nErrorCount := #s_nErrorCount + 1;
+         // <PROJECT_TIMESTAMP_LOG> — RD_LOC_T call
+      END_IF;
+      #s_bErrorEdgeMem := t_bAnyError;
+
+   END_REGION
+
+
+END_FUNCTION_BLOCK

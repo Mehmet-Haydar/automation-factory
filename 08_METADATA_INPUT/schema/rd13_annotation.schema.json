@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "rd13_annotation.schema.json",
+  "title": "RD13 — Legacy Code Annotation",
+  "description": "Per-project legacy annotation. Spec: MDSCHEMA_RAWDATA_13_ANNOTATION.md",
+  "type": "object",
+  "required": ["project_id", "Annotations"],
+  "properties": {
+    "project_id": { "type": "string" },
+    "plc_platform": {
+      "type": "string",
+      "enum": ["S5", "S7_300", "S7_400", "S7_1200", "S7_1500", "AB_L5X", "CODESYS", "Other"]
+    },
+    "plc_language": {
+      "type": "string",
+      "enum": ["STL", "LAD", "FBD", "SCL", "AWL", "IL", "SFC", "CFC", "Other"]
+    },
+    "Annotations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["AnnotationID", "BlockName", "BlockType", "PLCPlatform", "PLCLanguage", "LineRef", "OriginalCode", "FunctionCategory", "Explanation_TR", "WarningFlag", "ConfidenceLevel", "Status"],
+        "properties": {
+          "AnnotationID": { "type": "string", "pattern": "^ANN\\d{4}$" },
+          "BlockName": { "type": "string", "minLength": 1 },
+          "BlockType": { "type": "string", "enum": ["OB", "FB", "FC", "DB", "UDT", "VAT", "SFC", "SFB", "Other"] },
+          "PLCPlatform": { "type": "string", "enum": ["S5", "S7_300", "S7_400", "S7_1200", "S7_1500", "AB_L5X", "CODESYS", "Other"] },
+          "PLCLanguage": { "type": "string", "enum": ["STL", "LAD", "FBD", "SCL", "AWL", "IL", "SFC", "CFC", "Other"] },
+          "LineRef": { "type": "string", "pattern": "^L\\d{3,6}(-L\\d{3,6})?$" },
+          "NetworkRef": { "type": "string" },
+          "OriginalCode": { "type": "string", "minLength": 1, "maxLength": 2000 },
+          "FunctionCategory": {
+            "type": "string",
+            "enum": [
+              "IO_READ", "IO_WRITE", "ANALOG_SCALING",
+              "LOGIC_COMBINATIONAL", "LOGIC_SEQUENTIAL",
+              "TIMER", "COUNTER", "MATH", "COMPARISON",
+              "DATA_MOVE", "TYPE_CONVERT", "STRING_OP", "ARRAY_OP",
+              "DB_ACCESS", "BLOCK_CALL", "INTERRUPT",
+              "COMM_SEND", "COMM_RECEIVE",
+              "MOTION_CMD", "SAFETY_LOGIC",
+              "ALARM_TRIGGER", "MODE_CONTROL", "RECIPE_PARAM",
+              "DIAGNOSTIC", "INITIALIZATION", "WATCHDOG",
+              "DEAD_CODE", "OTHER"
+            ]
+          },
+          "Explanation_TR": { "type": "string", "minLength": 10 },
+          "DataFlowIn": { "type": "string" },
+          "DataFlowOut": { "type": "string" },
+          "CalledBlocks": { "type": "string" },
+          "LinkedRD": { "type": "string" },
+          "LinkedTag": { "type": "string" },
+          "LinkedStep": { "type": "string", "pattern": "^(S\\d{3}[A-Z]?|)$" },
+          "LinkedFB": { "type": "string" },
+          "WarningFlag": {
+            "type": "string",
+            "enum": ["N", "Y_MAGIC_NUMBER", "Y_HARDCODED_ADDR", "Y_UNDOCUMENTED", "Y_SAFETY_CONCERN", "Y_DEPRECATED_INSTR", "Y_DEAD_CODE", "Y_RACE_CONDITION", "Y_MULTIPLE"]
+          },
+          "WarningDetail": { "type": "string" },
+          "ConfidenceLevel": { "type": "string", "enum": ["HIGH", "MEDIUM", "LOW", "HUMAN_REQUIRED"] },
+          "ConfidenceNote": { "type": "string" },
+          "Notes": { "type": "string" },
+          "Status": { "type": "string", "enum": ["DRAFT", "AI_COMPLETE", "HUMAN_REVIEWED", "APPROVED", "OBSOLETE"] }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "WarningFlag": { "not": { "const": "N" } } } },
+            "then": { "required": ["WarningDetail"] }
+          },
+          {
+            "if": { "properties": { "ConfidenceLevel": { "enum": ["LOW", "HUMAN_REQUIRED"] } } },
+            "then": { "required": ["ConfidenceNote"] }
+          }
+        ],
+        "additionalProperties": true
+      }
+    }
+  }
+}

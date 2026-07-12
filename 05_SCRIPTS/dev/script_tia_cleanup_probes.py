@@ -1,0 +1,58 @@
+"""Delete FB_WDT_* probe external sources left by the bisect scripts.
+
+Usage: .venv\\Scripts\\python.exe 05_SCRIPTS\\dev\\script_tia_cleanup_probes.py
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve()
+ROOT = HERE.parents[2]
+for p in (str(ROOT), str(ROOT / "05_SCRIPTS")):
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+from bridges.tia.version_detect import find_one  # noqa: E402
+from bridges.tia.openness_core import OpennessCore  # noqa: E402
+
+# Diagnostic scripts run against a scratch TIA project on the dev machine.
+# Set TIA_PROBE_PROJECT to your own .ap19/.ap20/.ap21 scratch project.
+AP = Path(os.environ.get(
+    "TIA_PROBE_PROJECT",
+    r"C:\TIA_Projects\OpennessTest\OpennessTest.ap19"))
+
+
+def main() -> int:
+    inst = find_one("V19")
+    core = OpennessCore(inst.engineering_dll)
+    core.start_portal()
+    proj = core.open_project(AP)
+    _, plc_sw = core.find_plc(proj, "PLC_1")
+
+    removed = []
+    for src in list(plc_sw.ExternalSourceGroup.ExternalSources):
+        name = str(src.Name)
+        if name.startswith("FB_WDT_"):
+            try:
+                src.Delete()
+                removed.append(name)
+            except Exception as e:
+                print(f"could not delete {name}: {e}", flush=True)
+    for name in ("FB_WDT_OFS", "FB_WDT_NOELSE", "FB_WDT_NO99",
+                 "FB_WDT_FIXSEMI"):
+        blk = core._find_block(plc_sw.BlockGroup, name)
+        if blk is not None:
+            try:
+                blk.Delete()
+                removed.append(f"block:{name}")
+            except Exception as e:
+                print(f"could not delete block {name}: {e}", flush=True)
+    print(f"removed: {removed}", flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

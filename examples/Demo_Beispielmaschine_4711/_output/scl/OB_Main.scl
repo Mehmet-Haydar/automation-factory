@@ -1,0 +1,59 @@
+ORGANIZATION_BLOCK "OB_Main"
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : AUTOMATION_FACTORY
+VERSION : 0.1
+
+// OB1 — assembled by AUTOMATION_FACTORY program_assembler
+// Date      : 2026-06-10 04:10
+// Instances : 7
+// Library FBs are called via single-instance DBs (iDB_*).
+// WARNING: DRAFT — engineer review + TIA compile required.
+
+VAR_TEMP
+    // Temporary variables can be added here
+END_VAR
+
+BEGIN
+
+    // MOT_HYD_001 — Hydraulic pump star-delta main contactor feedback (old E 1.0) (FB_Motor_StarDelta)
+    "iDB_MOT_HYD_001"(
+        in_bFeedbackMain := "MOT_HYD_001_FBM",
+        in_bFeedbackDelta := "MOT_HYD_001_FBD",
+        out_bMain => "MOT_HYD_001_MAIN",
+        out_bStar => "MOT_HYD_001_STAR",
+        out_bDelta => "MOT_HYD_001_DELTA"
+    );
+    // TODO(#UNKNOWN): in_bFeedbackOverload ambiguous — candidates: MOT_HYD_001_FBS, MOT_HYD_001_OL (wire manually)
+
+    // MOT_CONV_002 — Conveyor belt motor run feedback (old E 1.4) (FB_MOTOR_DOL)
+    "iDB_MOT_CONV_002"(
+        in_bFeedbackRun := "MOT_CONV_002_FB",
+        in_bFeedbackOverload := "MOT_CONV_002_OL",
+        out_bMotorRun => "MOT_CONV_002_RUN"
+    );
+
+    // VLV_COOL_001 — Coolant valve open limit switch feedback (old E 2.0) (FB_VALVE_ONOFF)
+    "iDB_VLV_COOL_001"(
+        in_bFeedbackOpen := "VLV_COOL_001_ZSO",
+        out_bOpenOutput => "VLV_COOL_001_OPEN"
+    );
+    // TODO(#UNKNOWN): in_bFeedbackClosed not wired — no matching VLV_COOL_001 signal in RD01
+    // TODO(#UNKNOWN): out_bReadyOpen not wired — no matching VLV_COOL_001 signal in RD01
+    // TODO(#UNKNOWN): out_bReadyClosed not wired — no matching VLV_COOL_001 signal in RD01
+
+    // SEN_OILTEMP_001 — Oil temperature sensor 4-20mA (old EW 10) (FB_AnalogScale)
+    "iDB_SEN_OILTEMP_001"();
+
+    // system block FB_ModeManager
+    "iDB_ModeManager"();
+    // TODO(#UNKNOWN): configure FB_ModeManager parameters for this project
+
+    // system block FB_WATCHDOG
+    "iDB_Watchdog"();
+    // TODO(#UNKNOWN): configure FB_WATCHDOG parameters for this project
+
+    // system block FB_AlarmHandler
+    "iDB_AlarmHandler"();
+    // TODO(#UNKNOWN): configure FB_AlarmHandler parameters for this project
+
+END_ORGANIZATION_BLOCK

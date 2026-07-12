@@ -1,0 +1,7 @@
+DATA_BLOCK "iDB_AlarmHandler"
+{ S7_Optimized_Access := 'TRUE' }
+"FB_AlarmHandler"
+
+BEGIN
+
+END_DATA_BLOCK

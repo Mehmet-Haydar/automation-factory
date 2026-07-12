@@ -1,0 +1,172 @@
+// ============================================================================
+// FB_VALVE_ONOFF — 2-Way On/Off Valve Control
+// Source    : Factory Library
+// Contract  : 06_KNOWLEDGE_BASE/contracts/valve/FB_Valve_OnOff.contract.json
+// Lifecycle : AUTO_VERIFIED_structural | PENDING_TIA_VERIFY
+// ============================================================================
+// ============================================================
+// *** SAFETY NOTICE ***
+// This function block is NOT designed or validated for use in
+// Safety Instrumented Systems (SIS) per IEC 61508 / IEC 62061,
+// or as a safety-related control function per ISO 13849 (PLr).
+// For functional safety applications, use only certified safety
+// hardware or F-CPU safety functions. A qualified safety engineer
+// must review all applications involving process or personnel safety.
+// ============================================================
+
+FUNCTION_BLOCK "FB_VALVE_ONOFF"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 1.0
+
+   VAR_INPUT
+      in_bEnable          : Bool := FALSE;
+      in_bReset           : Bool := FALSE;
+      in_bManualMode      : Bool := FALSE;
+      in_bOpenCmd         : Bool := FALSE;   // Manual open command (HMI / manual mode)
+      in_bCloseCmd        : Bool := FALSE;   // Manual close command (HMI / manual mode)
+      in_bAutoOpenCmd     : Bool := FALSE;   // Automatic open command (sequence / interlock)
+      in_bAutoCloseCmd    : Bool := FALSE;   // Automatic close command (sequence / interlock)
+      in_bFeedbackOpen    : Bool := FALSE;
+      in_bFeedbackClosed  : Bool := FALSE;
+      in_tOpenTimeout     : Time := T#5S;
+      in_tCloseTimeout    : Time := T#5S;
+      in_bSpringReturn    : Bool := TRUE;    // TRUE = spring-return solenoid (outputs forced FALSE on idle/fault); FALSE = bistable/energy-maintained (outputs retain last state)
+   END_VAR
+
+   VAR_OUTPUT
+      out_bOpenOutput  : Bool := FALSE;
+      out_bCloseOutput : Bool := FALSE;
+      out_bReadyOpen   : Bool := FALSE;
+      out_bReadyClosed : Bool := FALSE;
+      out_bReady       : Bool := FALSE;
+      out_bError       : Bool := FALSE;
+      out_wErrorCode   : Word := 16#0000;
+      out_nState       : Int  := 0;
+   END_VAR
+
+   VAR
+      s_bResetEdgeMem : Bool := FALSE;
+      s_bResetTrig    : Bool := FALSE;
+      s_nStep         : Int  := 0;
+      s_nStepLast     : Int  := 0;
+      s_tonOpenTO     : TON;
+      s_tonCloseTO    : TON;
+      s_nErrorCount   : DInt := 0;
+   END_VAR
+
+   VAR_TEMP
+      t_bCmd      : Bool;   // Unused legacy temp; retained for structural compatibility
+      t_bOpenCmd  : Bool;   // Effective open command after manual/auto routing
+      t_bCloseCmd : Bool;   // Effective close command after manual/auto routing
+   END_VAR
+
+
+BEGIN
+
+   REGION 01_INPUT_VALIDATION
+      s_bResetTrig    := in_bReset AND NOT s_bResetEdgeMem;
+      s_bResetEdgeMem := in_bReset;
+
+      IF s_bResetTrig THEN
+         out_bError := FALSE; out_wErrorCode := 16#0000;
+         IF s_nStep = 99 THEN s_nStep := 0; END_IF;
+      END_IF;
+
+      IF NOT in_bEnable THEN
+         out_bOpenOutput := FALSE; out_bCloseOutput := FALSE;
+         out_bReady := FALSE; s_nStep := 0; RETURN;
+      END_IF;
+
+      // Open and Close command conflict check
+      IF in_bOpenCmd AND in_bCloseCmd THEN
+         out_bOpenOutput := FALSE; out_bCloseOutput := FALSE;
+         IF NOT out_bError THEN
+            out_bError := TRUE; out_wErrorCode := 16#0003;   // 16#0003 = Conflict: both cmds active
+            s_nErrorCount := s_nErrorCount + 1;
+         END_IF;
+         s_nStep := 99;
+      END_IF;
+   END_REGION
+
+
+   REGION 02_STATE_MACHINE
+      // Manual/Auto command routing (FIX S-1: in_bManualMode implemented)
+      IF in_bManualMode THEN
+         t_bOpenCmd  := in_bOpenCmd;     // Direct HMI command in manual mode
+         t_bCloseCmd := in_bCloseCmd;
+      ELSE
+         t_bOpenCmd  := in_bAutoOpenCmd;
+         t_bCloseCmd := in_bAutoCloseCmd;
+      END_IF;
+
+      CASE s_nStep OF
+
+         0:  // IDLE / determining position
+            IF in_bSpringReturn THEN
+               out_bOpenOutput  := FALSE;   // Spring drives valve to safe position
+               out_bCloseOutput := FALSE;
+            END_IF;
+            // If bistable (in_bSpringReturn = FALSE): outputs retain last commanded state
+            s_tonOpenTO(IN := FALSE, PT := in_tOpenTimeout);
+            s_tonCloseTO(IN := FALSE, PT := in_tCloseTimeout);
+            out_bReadyOpen   := in_bFeedbackOpen;
+            out_bReadyClosed := in_bFeedbackClosed;
+            out_bReady       := TRUE;
+            IF t_bOpenCmd AND NOT out_bError THEN s_nStep := 10; END_IF;
+            IF t_bCloseCmd AND NOT out_bError THEN s_nStep := 20; END_IF;
+
+         10: // OPENING
+            out_bOpenOutput := TRUE; out_bCloseOutput := FALSE;
+            s_tonOpenTO(IN := NOT in_bFeedbackOpen, PT := in_tOpenTimeout);
+            IF in_bFeedbackOpen THEN
+               s_tonOpenTO(IN := FALSE, PT := in_tOpenTimeout);
+               out_bReadyOpen := TRUE; s_nStep := 0;
+            END_IF;
+            IF s_tonOpenTO.Q THEN
+               out_bOpenOutput := FALSE;
+               out_bError := TRUE; out_wErrorCode := 16#0001;   // 16#0001 = No open feedback
+               s_nErrorCount := s_nErrorCount + 1;
+               s_nStep := 99;
+            END_IF;
+
+         20: // CLOSING
+            out_bOpenOutput := FALSE; out_bCloseOutput := TRUE;
+            s_tonCloseTO(IN := NOT in_bFeedbackClosed, PT := in_tCloseTimeout);
+            IF in_bFeedbackClosed THEN
+               s_tonCloseTO(IN := FALSE, PT := in_tCloseTimeout);
+               out_bReadyClosed := TRUE; s_nStep := 0;
+            END_IF;
+            IF s_tonCloseTO.Q THEN
+               out_bCloseOutput := FALSE;
+               out_bError := TRUE; out_wErrorCode := 16#0002;   // 16#0002 = No close feedback
+               s_nErrorCount := s_nErrorCount + 1;
+               s_nStep := 99;
+            END_IF;
+
+         99: // FAULT
+            IF in_bSpringReturn THEN
+               out_bOpenOutput  := FALSE;   // Spring drives valve to safe position
+               out_bCloseOutput := FALSE;
+            END_IF;
+            // If bistable (in_bSpringReturn = FALSE): outputs retain last commanded state
+            out_bReady := FALSE;
+
+      ELSE
+         out_wErrorCode := 16#FFFF; out_bError := TRUE; s_nStep := 99;
+      END_CASE;
+
+      IF s_nStep <> s_nStepLast THEN s_nStepLast := s_nStep; END_IF;
+   END_REGION
+
+
+   REGION 03_OUTPUT_LOGIC
+      out_nState := s_nStep;
+   END_REGION
+
+
+   REGION 04_DIAGNOSTICS
+      // s_nErrorCount: total fault events
+   END_REGION
+
+
+END_FUNCTION_BLOCK

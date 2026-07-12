@@ -1,0 +1,337 @@
+{
+  "_schema_version": "1.0.0",
+  "contract_version": "1.0.0",
+  "block": {
+    "name": "FB_Motor_StarDelta",
+    "version": "1.0.0",
+    "type": "FB",
+    "domain": "motor",
+    "device_type": "StarDelta",
+    "platform": "S7_1500_TIA_V18+",
+    "source": "Factory",
+    "lifecycle": "DRAFT",
+    "description": "Star-Delta motor starter. Three contactors (main/star/delta), run feedback, overload, transition timing."
+  },
+  "interface": {
+    "inputs": [
+      {
+        "name": "in_bEnable",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bReset",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bManualMode",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bStartCmd",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bStopCmd",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bManualStart",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true,
+        "description": "Manual start (active only when in_bManualMode=TRUE)"
+      },
+      {
+        "name": "in_bManualStop",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true,
+        "description": "Manual stop (active only when in_bManualMode=TRUE)"
+      },
+      {
+        "name": "in_bFeedbackMain",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bFeedbackDelta",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_bFeedbackOverload",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "in_tStarDuration",
+        "iec_type": "Time",
+        "default": "T#5S",
+        "required": true
+      },
+      {
+        "name": "in_tDeadTime",
+        "iec_type": "Time",
+        "default": "T#100MS",
+        "required": true
+      },
+      {
+        "name": "in_tStartTimeout",
+        "iec_type": "Time",
+        "default": "T#3S",
+        "required": true
+      },
+      {
+        "name": "in_tStopTimeout",
+        "iec_type": "Time",
+        "default": "T#5S",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "name": "out_bMain",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bStar",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bDelta",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bReady",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_bError",
+        "iec_type": "Bool",
+        "default": false,
+        "required": true
+      },
+      {
+        "name": "out_wErrorCode",
+        "iec_type": "Word",
+        "default": "16#0000",
+        "required": true
+      },
+      {
+        "name": "out_nState",
+        "iec_type": "Int",
+        "default": 0,
+        "required": true
+      },
+      {
+        "name": "out_dRunHours",
+        "iec_type": "DInt",
+        "default": 0,
+        "required": true
+      }
+    ],
+    "in_out": [],
+    "static_vars": [
+      {
+        "name": "s_bResetEdgeMem",
+        "iec_type": "Bool"
+      },
+      {
+        "name": "s_bResetTrig",
+        "iec_type": "Bool"
+      },
+      {
+        "name": "s_nStep",
+        "iec_type": "Int"
+      },
+      {
+        "name": "s_tonStarDur",
+        "iec_type": "TON"
+      },
+      {
+        "name": "s_tonDeadTime",
+        "iec_type": "TON"
+      },
+      {
+        "name": "s_tonStartTO",
+        "iec_type": "TON"
+      }
+    ]
+  },
+  "constraints": {
+    "mandatory_regions": [
+      "01_INPUT_VALIDATION",
+      "02_STATE_MACHINE",
+      "03_OUTPUT_LOGIC",
+      "04_DIAGNOSTICS"
+    ],
+    "mandatory_behaviors": [
+      {
+        "id": "B-SD-001",
+        "description": "Reset rising edge",
+        "check_pattern": "s_bResetTrig\\s*:=\\s*.*in_bReset.*AND\\s*NOT.*s_bResetEdgeMem",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-SD-002",
+        "description": "Star-Duration timer present",
+        "check_pattern": "s_tonStarDur",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-SD-003",
+        "description": "Dead-time (star-off to delta-on) timer present",
+        "check_pattern": "s_tonDeadTime",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-SD-004",
+        "description": "STAR and DELTA outputs mutually exclusive (never both TRUE)",
+        "check_pattern": "out_bStar.*AND.*out_bDelta|interlock|NOT.*out_bDelta|NOT.*out_bStar",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-SD-005",
+        "description": "Error code 16#0001 present",
+        "check_pattern": "16#0001",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-SD-006",
+        "description": "Error code 16#0003 (overload) present",
+        "check_pattern": "16#0003",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-SD-007",
+        "description": "Error code 16#0010 (STAR+DELTA overlap) present",
+        "check_pattern": "16#0010",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-SD-008",
+        "description": "FB name is FB_Motor_StarDelta",
+        "check_pattern": "FUNCTION_BLOCK\\s+\"?FB_Motor_StarDelta\"?",
+        "severity": "MUST"
+      },
+      {
+        "id": "B-SD-009",
+        "description": "Optimized Access declared",
+        "check_pattern": "S7_Optimized_Access\\s*:=\\s*'TRUE'",
+        "severity": "MUST"
+      }
+    ],
+    "forbidden_patterns": [
+      "CURRENT_TIME\\(\\)",
+      "GET_SYSTIME\\(\\)",
+      "RUNTIME\\s*\\("
+    ],
+    "error_codes": [
+      {
+        "hex": "16#0001",
+        "meaning": "Main contactor no run feedback within timeout"
+      },
+      {
+        "hex": "16#0003",
+        "meaning": "Motor overload triggered"
+      },
+      {
+        "hex": "16#0010",
+        "meaning": "STAR and DELTA feedback both active simultaneously"
+      },
+      {
+        "hex": "16#0011",
+        "meaning": "Transition timeout (star-to-delta)"
+      }
+    ]
+  },
+  "gate": {
+    "checks": [
+      {
+        "id": "G-01",
+        "type": "structural",
+        "description": "scl_validator keyword/paren balance",
+        "required": true
+      },
+      {
+        "id": "G-02",
+        "type": "contract_interface",
+        "description": "Required ports + types",
+        "required": true
+      },
+      {
+        "id": "G-03",
+        "type": "contract_behavior",
+        "description": "MUST behavioral patterns",
+        "required": true
+      },
+      {
+        "id": "G-04",
+        "type": "contract_error_codes",
+        "description": "Required error codes in SCL",
+        "required": true
+      },
+      {
+        "id": "G-05",
+        "type": "forbidden_pattern",
+        "description": "No Siemens-proprietary calls",
+        "required": true
+      },
+      {
+        "id": "G-06",
+        "type": "plcrex",
+        "description": "PLCreX optional parse",
+        "required": false
+      }
+    ]
+  },
+  "prompt_binding": {
+    "file": "04_AI_PROMPTS/code_gen/motor/PROMPT_MOTOR_STAR_DELTA.md",
+    "version": "1.0.0",
+    "last_synced": "2026-05-30"
+  },
+  "duplicate_detection": {
+    "alternatives": [
+      "FB_Motor_SoftStarter"
+    ],
+    "note": "Use StarDelta for 7.5-75 kW across-the-line; for softer start use SoftStarter."
+  },
+  "meta": {
+    "source": "factory",
+    "license": "MIT",
+    "safety_class": "STANDARD",
+    "target_platform": "TIA Portal V18+",
+    "compatible_tia": [
+      "V18",
+      "V19"
+    ]
+  },
+  "behaviors": [],
+  "acceptance": {
+    "contract_check": true,
+    "compile_check": true,
+    "sim_test": true,
+    "human_signoff": true
+  }
+}

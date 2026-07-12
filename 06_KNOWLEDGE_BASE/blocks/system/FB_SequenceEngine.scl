@@ -1,0 +1,155 @@
+// ============================================================================
+// FB_SequenceEngine — Configurable Step Sequencer
+// Source    : Factory Library
+// Contract  : 06_KNOWLEDGE_BASE/contracts/system/FB_SequenceEngine.contract.json
+// Lifecycle : AUTO_VERIFIED_structural | PENDING_TIA_VERIFY
+// ============================================================================
+// ============================================================
+// *** SAFETY NOTICE ***
+// This function block is NOT designed or validated for use in
+// Safety Instrumented Systems (SIS) per IEC 61508 / IEC 62061,
+// or as a safety-related control function per ISO 13849 (PLr).
+// For functional safety applications, use only certified safety
+// hardware or F-CPU safety functions. A qualified safety engineer
+// must review all applications involving process or personnel safety.
+// ============================================================
+
+FUNCTION_BLOCK "FB_SequenceEngine"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 1.0
+
+   VAR_INPUT
+      in_bEnable      : Bool := FALSE;
+      in_bReset       : Bool := FALSE;
+      in_bStart       : Bool := FALSE;
+      in_bPause       : Bool := FALSE;
+      in_bAbort       : Bool := FALSE;
+      in_bStepDone    : Bool := FALSE;
+      in_tStepTimeout : Time := T#30S;
+      in_nTotalSteps  : Int  := 1;
+   END_VAR
+
+   VAR_OUTPUT
+      out_nCurrentStep : Int  := 0;
+      out_bRunning     : Bool := FALSE;
+      out_bPaused      : Bool := FALSE;
+      out_bComplete    : Bool := FALSE;
+      out_bReady       : Bool := FALSE;
+      out_bError       : Bool := FALSE;
+      out_wErrorCode   : Word := 16#0000;
+      out_nState       : Int  := 0;
+      out_dCycleCount  : DInt := 0;
+   END_VAR
+
+   VAR
+      s_bResetEdgeMem  : Bool := FALSE;
+      s_bResetTrig     : Bool := FALSE;
+      s_nStep          : Int  := 0;
+      s_nStepLast      : Int  := 0;
+      s_nSequenceStep  : Int  := 0;
+      s_tonStepTimeout : TON;
+      s_nErrorCount    : DInt := 0;
+   END_VAR
+
+   VAR_TEMP
+      t_bStartEdge : Bool;
+   END_VAR
+
+
+BEGIN
+
+   REGION 01_INPUT_VALIDATION
+      s_bResetTrig    := in_bReset AND NOT s_bResetEdgeMem;
+      s_bResetEdgeMem := in_bReset;
+
+      IF s_bResetTrig THEN
+         out_bError := FALSE; out_wErrorCode := 16#0000;
+         s_nSequenceStep := 0; out_bComplete := FALSE;
+         s_tonStepTimeout(IN := FALSE, PT := in_tStepTimeout);
+         IF s_nStep = 99 THEN s_nStep := 0; END_IF;
+      END_IF;
+
+      IF NOT in_bEnable THEN
+         out_bRunning := FALSE; out_bPaused := FALSE;
+         out_bReady := FALSE; s_nStep := 0;
+         s_nSequenceStep := 0; RETURN;
+      END_IF;
+
+      // Abort command — immediate stop
+      IF in_bAbort AND out_bRunning THEN
+         out_bRunning := FALSE;
+         out_bError := TRUE; out_wErrorCode := 16#0002;   // 16#0002 = Abort during sequence
+         s_nErrorCount := s_nErrorCount + 1;
+         s_tonStepTimeout(IN := FALSE, PT := in_tStepTimeout);
+         s_nStep := 99;
+      END_IF;
+   END_REGION
+
+
+   REGION 02_STATE_MACHINE
+      CASE s_nStep OF
+
+         0:  // IDLE
+            out_bReady := TRUE; out_bRunning := FALSE;
+            out_bPaused := FALSE; out_bComplete := FALSE;
+            out_nCurrentStep := 0;
+            s_tonStepTimeout(IN := FALSE, PT := in_tStepTimeout);
+            IF in_bStart AND NOT out_bError THEN
+               s_nSequenceStep := 1; s_nStep := 10;
+            END_IF;
+
+         10: // EXECUTING SEQUENCE
+            out_bRunning := TRUE; out_bReady := FALSE;
+            out_nCurrentStep := s_nSequenceStep;
+
+            IF in_bPause THEN
+               out_bPaused := TRUE;
+            ELSIF out_bPaused THEN
+               out_bPaused := FALSE;
+            END_IF;
+
+            IF NOT out_bPaused THEN
+               s_tonStepTimeout(IN := NOT in_bStepDone, PT := in_tStepTimeout);
+
+               IF s_tonStepTimeout.Q THEN
+                  // Step timeout
+                  out_bError := TRUE; out_wErrorCode := 16#0001;   // 16#0001 = Step timeout
+                  s_nErrorCount := s_nErrorCount + 1;
+                  s_tonStepTimeout(IN := FALSE, PT := in_tStepTimeout);
+                  s_nStep := 99;
+               ELSIF in_bStepDone THEN
+                  s_tonStepTimeout(IN := FALSE, PT := in_tStepTimeout);
+                  IF s_nSequenceStep >= in_nTotalSteps THEN
+                     // All steps done
+                     out_bComplete := TRUE; out_bRunning := FALSE;
+                     out_dCycleCount := out_dCycleCount + 1;
+                     s_nSequenceStep := 0; s_nStep := 0;
+                  ELSE
+                     s_nSequenceStep := s_nSequenceStep + 1;
+                  END_IF;
+               END_IF;
+            END_IF;
+
+         99: // FAULT
+            out_bRunning := FALSE; out_bReady := FALSE;
+            out_nCurrentStep := 0;
+
+      ELSE
+         out_wErrorCode := 16#FFFF; out_bError := TRUE; s_nStep := 99;
+      END_CASE;
+
+      IF s_nStep <> s_nStepLast THEN s_nStepLast := s_nStep; END_IF;
+   END_REGION
+
+
+   REGION 03_OUTPUT_LOGIC
+      out_nState := s_nStep;
+   END_REGION
+
+
+   REGION 04_DIAGNOSTICS
+      // out_dCycleCount: completed sequence cycles
+   END_REGION
+
+
+END_FUNCTION_BLOCK

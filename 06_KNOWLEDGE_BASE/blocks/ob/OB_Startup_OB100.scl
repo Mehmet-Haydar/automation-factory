@@ -1,0 +1,69 @@
+// ============================================================================
+// OB_STARTUP_OB100 — CPU Startup Organization Block (Template)
+// Source    : Factory Library
+// Contract  : 06_KNOWLEDGE_BASE/contracts/ob/OB_Startup_OB100.contract.json
+// Lifecycle : AUTO_VERIFIED_structural | PENDING_TIA_VERIFY
+// STATUS    : STUB_ONLY — project engineer must fill <PROJECT_*> placeholders
+//             before commissioning. All REGION bodies are empty skeletons.
+// ============================================================================
+// ============================================================
+// *** SAFETY NOTICE ***
+// This function block is NOT designed or validated for use in
+// Safety Instrumented Systems (SIS) per IEC 61508 / IEC 62061,
+// or as a safety-related control function per ISO 13849 (PLr).
+// For functional safety applications, use only certified safety
+// hardware or F-CPU safety functions. A qualified safety engineer
+// must review all applications involving process or personnel safety.
+// ============================================================
+
+ORGANIZATION_BLOCK "OB_STARTUP_OB100"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 1.0
+
+   VAR_TEMP
+      tmp_iTemp : Int;
+   END_VAR
+
+
+BEGIN
+
+   //===========================================================================
+   // REGION: 01_DB_INIT
+   // Purpose: Initialize all instance DBs to safe defaults
+   //===========================================================================
+   REGION 01_DB_INIT
+      // <PROJECT_DB_INIT>
+      // Example: "DB_Mot_Conv01".bRunning := FALSE;
+      //          "DB_Mot_Conv01".iFaultCode := 0;
+   END_REGION
+
+
+   //===========================================================================
+   // REGION: 02_SAFE_STATE
+   // Purpose: Ensure all outputs are in a safe state on startup
+   //===========================================================================
+   REGION 02_SAFE_STATE
+      // <PROJECT_SAFE_STATE> — replace comments with actual output assignments
+      // Pattern: set every physical output to its safe (de-energized) default.
+      // Example skeleton (adapt tag names to your project):
+      //   "Q_MOT_001_RUN"  := FALSE;   // Motor 1 contactor coil OFF
+      //   "Q_MOT_002_RUN"  := FALSE;   // Motor 2 contactor coil OFF
+      //   "Q_VLV_001_OPEN" := FALSE;   // Valve 1 solenoid CLOSED
+      //   "Q_VLV_001_CLOSE":= FALSE;   // Valve 1 close coil OFF
+      // All FB_Motor_Standard / FB_Motor_DOL outputs are de-energized
+      // because the FB initializes out_bMotorRun := FALSE on first scan.
+      // Mode starts as STOPPED (out_nCurrentMode = 1) per FB_ModeManager default.
+   END_REGION
+
+
+   //===========================================================================
+   // REGION: 03_VERSION_LOG
+   // Purpose: Log startup event and firmware version to diagnostic DB
+   //===========================================================================
+   REGION 03_VERSION_LOG
+      // <PROJECT_VERSION_LOG>
+      // Write firmware version and startup timestamp to DB_System
+   END_REGION
+
+
+END_ORGANIZATION_BLOCK
