@@ -9,7 +9,7 @@
 
 > **KI-gestütztes Framework für industrielle SPS-Programmierung.** Alt-SPS-Code (S5/S7/AB/CODESYS) oder Greenfield-Brief → standardisiertes 14-Punkte-Rohdatenpaket → KI-generierter SCL-Code nach Industriestandard.
 
-![Gate-Pipeline](docs/img/screenshot_gates.png)
+![Workbench-Cockpit](docs/img/demo/01_workbench_full.png)
 *Die 7-Gate-Pipeline: Die KI entwirft das 14-Punkte-Anforderungspaket, der Ingenieur prüft und unterschreibt an den entscheidenden Stellen, dann wird bibliotheksbasierter SCL-Code für S7-1500 generiert.*
 
 **Version:** v3.10.0 (HMI & Abgleich V2: freigegebene Verdrahtungs-Codegenerierung · Gate-3-Abgleich+Waiver · direkter .s5d-Import)

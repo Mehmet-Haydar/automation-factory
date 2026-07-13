@@ -14,7 +14,7 @@ drafts, a **deterministic layer proves or refuses**, and the engineer signs
 what matters. It is a validated core built by an automation engineer directing
 AI tools, not a shipped product — and it says so.
 
-![Gate pipeline](img/screenshot_gates.png)
+![Workbench cockpit](img/demo/01_workbench_full.png)
 
 ## Proof points (re-runnable)
 
@@ -34,7 +34,7 @@ signs. Gate-3 is a bulk sign-off: *"I read it, I understood it, generate."*
 FAT/SAT protocols, SISTEMA and CE documents are generated as **drafts with
 honest labels** (`AUTO_VERIFIED_structural | PENDING_TIA_VERIFY`).
 
-![SCL editor](img/screenshot_editor.png)
+![Generated SCL compiled in TIA Portal V19](img/demo/23_tia_ob_main_code.png)
 
 ## Try it in 10 minutes (no license, no AI key)
 

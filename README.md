@@ -9,7 +9,7 @@
 
 > **AI-assisted industrial PLC programming framework.** Legacy PLC code (S5/S7/AB/CODESYS) or greenfield brief → standardized 14-Point Raw Data Pack → AI-generated industrial-standard SCL code.
 
-![Gate pipeline](docs/img/screenshot_gates.png)
+![Workbench cockpit](docs/img/demo/01_workbench_full.png)
 *The 7-gate pipeline: AI drafts the 14-point requirements pack, the engineer reviews & signs where it matters, then library-first SCL is generated for S7-1500.*
 
 **Version:** v3.10.0 (HMI & reconciliation V2: approved wiring codegen · Gate-3 reconciliation+waivers · direct .s5d import)
@@ -51,15 +51,31 @@ If any of it is useful to you, take it. Feedback and corrections welcome.
 
 The [`examples/DemoRun_MixingStation/`](examples/DemoRun_MixingStation/) project was produced **live, end-to-end**: synthetic S7-300 legacy code → 14-Point Requirements Pack → library-first SCL → **imported and compiled in a real TIA Portal V19**.
 
-| 14-Point Pack (project dashboard) | Safety analysis — certified-engineer sign-off (RD05) |
+| 14-Point Pack (project dashboard) | Safety draft — `DRAFT_UNVERIFIED` until signed |
 |:---:|:---:|
-| ![Dashboard](docs/img/demo/02_dashboard.png) | ![RD05 safety](docs/img/demo/10_rd05_safety_table.png) |
-| **Human-in-the-loop gate lock (Gate 3)** | **Editable IO list (RD01)** |
-| ![Gate-3 lock](docs/img/demo/14_gate3_reconciliation.png) | ![IO list](docs/img/demo/08_rd01_io_list.png) |
+| ![Dashboard](docs/img/demo/02_dashboard.png) | ![RD05 safety banner](docs/img/demo/09_rd05_safety_banner.png) |
+| **AI-found safety functions (RD05)** | **Editable IO list (RD01)** |
+| ![RD05 safety table](docs/img/demo/10_rd05_safety_table.png) | ![IO list](docs/img/demo/08_rd01_io_list.png) |
+| **Human-in-the-loop gate lock (Gate 3)** | **Customer-facing modernization report** |
+| ![Gate-3 lock](docs/img/demo/14_gate3_reconciliation.png) | ![Customer report](docs/img/demo/05_customer_report_pdf.png) |
 | **Generated SCL, compiled in TIA Portal V19** | **IO tags imported into TIA** |
 | ![OB_Main in TIA](docs/img/demo/23_tia_ob_main_code.png) | ![TIA IO tags](docs/img/demo/24_tia_io_tags.png) |
 
 *The AI drafts every requirement doc as `DRAFT_UNVERIFIED`; SIL/PLr is never guessed; the gate lock cannot advance until the critical docs carry a named engineer approval. See the [demo project README](examples/DemoRun_MixingStation/README.md).*
+
+---
+
+## 🖥️ A closer look
+
+A few more corners of the Workbench — same live run, same demo project.
+
+| Gate-1 approval workflow | HMI wiring — engineer Approve/Reject |
+|:---:|:---:|
+| ![Gate-1 approval](docs/img/demo/03_gate1_discovery_approval.png) | ![HMI wiring approval](docs/img/demo/13_hmi_wiring_approval.png) |
+| **AI prompt library (multi-platform)** | **Curated SCL block library** |
+| ![Prompt workspace](docs/img/demo/06_prompt_workspace.png) | ![Block library](docs/img/demo/07_block_library.png) |
+| **Multi-provider AI settings** | **TIA Portal / Openness settings** |
+| ![Multi-provider settings](docs/img/demo/17_settings_multi_provider.png) | ![TIA Portal settings](docs/img/demo/18_settings_tia_portal.png) |
 
 ---
 

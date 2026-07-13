@@ -9,7 +9,7 @@
 
 > **AI destekli endüstriyel PLC programlama çerçevesi.** Eski PLC kodu (S5/S7/AB/CODESYS) veya greenfield brief → standart 14 Maddelik Ham Veri Paketi → endüstri standardında AI üretimi SCL kodu.
 
-![Gate hattı](docs/img/screenshot_gates.png)
+![Workbench kokpiti](docs/img/demo/01_workbench_full.png)
 *7 kapılı hat: AI 14 maddelik gereksinim paketini taslaklar, mühendis önemli yerlerde inceler ve imzalar, ardından S7-1500 için kütüphane-öncelikli SCL üretilir.*
 
 **Sürüm:** v3.10.0 (HMI & mutabakat V2: onaylı kablolama codegen · Gate-3 mutabakat+waiver · doğrudan .s5d import)
