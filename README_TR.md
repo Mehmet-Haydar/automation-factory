@@ -31,8 +31,8 @@ neden SIL'in asla tahmin edilemeyeceği, neden bakımcının SCL değil merdiven
 okuduğu.
 
 Yani bu **bitmiş bir ürün değil** ve öyle olduğunu **iddia etmiyorum**.
-Uçtan uca **tek** bir gerçek, belgesiz S5 makinesinde kanıtlandı (eski bir
-taşlama hattı, ~300 IO) — sıfır hatayla derlenen bir TIA projesi
+Uçtan uca **tek** bir gerçek, belgesiz S5 makinesinde kanıtlandı (~300 IO)
+— sıfır hatayla derlenen bir TIA projesi
 ve tam 14 belgelik paket üretti. Bu bir *doğrulanmış çekirdek*, *satılan
 araç* değil: üretimde güvenilmeden önce daha çok gerçek makine, canlı bir
 PLCSIM koşusu ve bir pilot gerekiyor.

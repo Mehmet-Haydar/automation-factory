@@ -247,7 +247,7 @@ def port_synonyms(port_token: str) -> frozenset:
 # "KE ROLLENBAHN 1.1 * 7-M3 (EINLAUF)" → M3, "MOTORSCHUTZUEBERW. HYDRM. 5-M1"
 # → M1. The page number prefix ("7-") disambiguates a real device reference
 # from prose; a bare "M3" in text is NOT matched (too ambiguous).
-# A/B/C benchmark (Schleifmaschine 4711 demo): the AI leaves
+# A/B/C benchmark (Beispielmaschine 4711 demo): the AI leaves
 # the RD01 Equipment column empty in ~half the runs — wiring then collapses
 # (15 → 5 bound ports). This deterministic extraction is the guarantee.
 _DEVREF_RE = re.compile(r"\b\d+\s*-\s*([MKYFP]\d{1,3})\b", re.I)

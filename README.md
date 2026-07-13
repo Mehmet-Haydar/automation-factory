@@ -29,8 +29,8 @@ retrofit, why a *wrong* interlock is worse than a *missing* one, why SIL can
 never be guessed, why a maintenance electrician reads ladder, not SCL.
 
 So this is **not** a finished product and I make **no** claim that it is. It
-has been proven end-to-end on **one** real, undocumented S5 machine (a legacy
-grinding line, ~300 IO) — it produced a TIA project that
+has been proven end-to-end on **one** real, undocumented S5 machine (~300 IO)
+— it produced a TIA project that
 compiled with zero errors and a full 14-document pack. That is a *validated
 core*, not a *shipped tool*: it needs more real machines, a live PLCSIM run,
 and a pilot before anyone should trust it in production.

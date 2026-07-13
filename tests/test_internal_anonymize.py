@@ -170,7 +170,7 @@ class TestAnonMapForAi:
         """gate.requires_anonymization=True iken PROJECT_STATE varsa map döner."""
         state = {
             "customer": "Müller GmbH",
-            "project_name": "Schleifmaschine_Test",
+            "project_name": "Beispielmaschine_Test",
             "data_classification": "INTERNAL",
         }
         (tmp_path / "PROJECT_STATE.json").write_text(

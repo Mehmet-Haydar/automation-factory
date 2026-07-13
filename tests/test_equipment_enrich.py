@@ -1,6 +1,6 @@
 """Proof tests — deterministic RD01 Equipment column guarantee.
 
-A/B/C benchmark (Schleifmaschine 4711 demo): the assembler
+A/B/C benchmark (Beispielmaschine 4711 demo): the assembler
 groups devices by the Equipment column; an AI draft that leaves it empty
 collapses the wiring from 15 to 5 bound ports. The device reference is
 already in the legacy data ("… * 7-M3 (EINLAUF)") — these tests pin the
@@ -40,7 +40,7 @@ def test_equipment_from_text_rejects_prose():
 
 IOSEQ = (
     "\tI 5.0\tE 5.0\tKE ROLLENBAHN 1.1 * 7-M3  (EINLAUF)\n"
-    "\tI 6.5\tE 6.5\tKE MOTORSCHUTZ SCHLEIFSPINDEL 5-M1\n"
+    "\tI 6.5\tE 6.5\tKE MOTORSCHUTZ HAUPTANTRIEB 5-M1\n"
     "\tQ 28.4\tA 28.4\tYH VEREINZELUNG SCHLIESSEN\n"
 )
 

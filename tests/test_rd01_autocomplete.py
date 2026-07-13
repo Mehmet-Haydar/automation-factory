@@ -1,6 +1,6 @@
 """Proof tests — deterministic RD01 completion from symbol tables.
 
-Benchmark (Schleifmaschine 4711 demo, ~300 IO): a cheap model's output
+Benchmark (Beispielmaschine 4711 demo, ~300 IO): a cheap model's output
 window (~8k tokens) cannot hold a 190-row IO table — the draft truncated
 mid-row. The fix: a Zuordnungsliste is STRUCTURED data; missing operands are
 appended mechanically, flagged as deterministic, and the cross-check goes

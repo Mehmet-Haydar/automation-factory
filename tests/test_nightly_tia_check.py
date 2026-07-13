@@ -64,12 +64,12 @@ def test_full_run_no_project_is_failure():
 
 def test_full_run_missing_project_does_not_leak_path():
     lines: list[str] = []
-    bogus = Path("Z:/secret/customer/Schleifmaschine_4711/Scratch.ap19")
+    bogus = Path("Z:/secret/customer/Beispielmaschine_4711/Scratch.ap19")
     rc = ntc.run_full(bogus, out=lines.append)
     assert rc == 1
     out = "\n".join(lines)
     # Log hygiene: neither the path nor the customer token may appear.
-    assert "Schleifmaschine_4711" not in out
+    assert "Beispielmaschine_4711" not in out
     assert "secret" not in out
     assert "Z:/" not in out and "Z:\\" not in out
 

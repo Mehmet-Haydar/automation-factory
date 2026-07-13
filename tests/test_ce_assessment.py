@@ -25,7 +25,7 @@ def _mk_project(tmp_path: Path, ptype: str = "retrofit") -> Path:
     proj = tmp_path / "Proj_CE"
     proj.mkdir(parents=True)
     (proj / "PROJECT_STATE.json").write_text(json.dumps({
-        "project_name": "Schleifmaschine_4711",
+        "project_name": "Beispielmaschine_4711",
         "project_type": ptype,
         "customer": "ACME",
         "target_platform": "S7_1500",
@@ -84,7 +84,7 @@ class TestCeAssessment:
         proj = _mk_project(tmp_path)
         text = generate_ce_assessment(proj, lang="en").md_path.read_text(
             encoding="utf-8")
-        assert "Schleifmaschine_4711" in text
+        assert "Beispielmaschine_4711" in text
         assert "ACME" in text
         assert "S7_1500" in text
 

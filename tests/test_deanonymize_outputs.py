@@ -18,7 +18,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 
-ANON_MAP = {"Müller GmbH": "CUSTOMER_A", "Schleifmaschine_X": "PROJECT_001"}
+ANON_MAP = {"Müller GmbH": "CUSTOMER_A", "Beispielmaschine_X": "PROJECT_001"}
 
 
 def _deanon(text):

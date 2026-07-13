@@ -22,7 +22,7 @@ AI tools, not a shipped product — and it says so.
 |---|---|
 | **1662 automated tests, green** | `python -m pytest` — count re-verified 2026-07-06 |
 | **18/18 library blocks import + compile in a real TIA Portal V19** | first full live Openness run 2026-07-06 (headless, `05_SCRIPTS/nightly_tia_check.py`); two library defects found by that run were fixed the same day (UDT ordering, VERSION format) |
-| **Blind test on a real, undocumented legacy machine** (grinding line, ~300 IO) | produced a TIA project that compiled with **0 errors** + a full 14-document pack |
+| **Blind test on a real, undocumented legacy machine** (~300 IO) | produced a TIA project that compiled with **0 errors** + a full 14-document pack |
 | **The extraction proves itself** | legacy bit-logic replayed on **128 random vectors** per network; 230/261 networks proven, the remaining 31 are **listed as unsolved** instead of guessed |
 | **Refuses instead of hallucinating** | unknown signals stay marked `❓`; SIL/PLr is never estimated (`DRAFT_UNVERIFIED`); uncertain blocks are skipped **fail-closed** at TIA import; downloads refuse any target not verified as PLCSIM |
 | **Deterministic code assembly** | Gate-4 SCL comes from the curated block library (`06_KNOWLEDGE_BASE/blocks/` + contracts + acceptance gate), not from free-form AI output |

@@ -2,7 +2,7 @@
 """
 rd01_autocomplete.py — deterministic RD01 completion from legacy symbol tables.
 
-WHY (Schleifmaschine 4711 demo, ~300 IO): asking an LLM to
+WHY (Beispielmaschine 4711 demo, ~300 IO): asking an LLM to
 TRANSCRIBE a 190-row IO table is architecturally wrong — cheap models cap
 output at ~8k tokens, the table gets cut mid-row, and the missing signals
 surface weeks later in TIA. A Zuordnungsliste (io.seq / .SDF / .SEQ) is

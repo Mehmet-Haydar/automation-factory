@@ -2,7 +2,7 @@
 """
 legacy_enrich.py — deterministic S5→S7 enrichment of legacy AWL exports.
 
-WHY (A/B/C benchmark on the Schleifmaschine 4711 demo): the raw
+WHY (A/B/C benchmark on the Beispielmaschine 4711 demo): the raw
 "S5 for Windows" AWL export is bare mnemonics — no comments, no symbols,
 bracket-numbered networks. Feeding it to the analysis AI yields generic
 block summaries. Feeding the SAME code with the Zuordnungsliste symbols
