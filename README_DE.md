@@ -20,6 +20,52 @@
 
 ---
 
+## 👋 Ehrlicher Hinweis — was das hier ist (und was nicht)
+
+Ich bin **Automatisierungsingenieur**, kein Softwareentwickler. Ich habe dies beim Lernen aufgebaut, indem ich **KI-Werkzeuge angeleitet** habe — Ideen vorgeschlagen, getestet, gescheitert, iteriert. Der Python-Code wurde von der KI unter meiner Anleitung geschrieben; was ich beigetragen habe, ist das **Fachurteil**: wie ein guter Ingenieur an ein Retrofit herangehen sollte, warum eine *falsche* Verriegelung schlimmer ist als eine *fehlende*, warum SIL niemals geschätzt werden darf, warum ein Wartungselektriker Kontaktplan liest, nicht SCL.
+
+Das hier ist also **kein** fertiges Produkt, und ich behaupte **nicht**, dass es eines ist. Es wurde durchgängig an **einer** echten, undokumentierten S5-Maschine (~300 IO) erprobt — daraus entstand ein TIA-Projekt, das fehlerfrei kompilierte, plus ein vollständiges 14-Dokumente-Paket. Das ist ein *validierter Kern*, kein *ausgeliefertes Werkzeug*: es braucht mehr reale Maschinen, einen Live-PLCSIM-Lauf und ein Pilotprojekt, bevor jemand ihm in der Produktion vertrauen sollte.
+
+Was ich für wirklich sehenswert halte, ist **die Architektur, nicht die KI-Ausgabe** — eine deterministische Verifikationsschicht, die ihre eigene Extraktion **beweist** (spielt die Alt-Bitlogik an 128 Zufallsvektoren nach) und **"ich weiß es nicht" sagt**, statt zu halluzinieren. Diese Disziplin — Ehrlichkeit statt selbstbewusstem Unsinn — ist der Kern der Sache, und sie kommt aus dem Feld, nicht aus dem Modell.
+
+Wenn Ihnen etwas davon nützt, nehmen Sie es. Feedback und Korrekturen sind willkommen.
+
+**Hintergrund:** Entstanden über ~2 Monate (Mai–Juli 2026) als Solo-Projekt mit KI-Unterstützung — 15 Releases (v3.0 → v3.10), 1600+ automatisierte Tests, vom ersten Konzept bis zu einem validierten Kern, durchgängig an einer echten Maschine erprobt. Das [Changelog](CHANGELOG.md) ist die vollständige Reise.
+
+---
+
+## 🎬 Demo — sehen Sie es in Aktion
+
+Das Projekt [`examples/DemoRun_MixingStation/`](examples/DemoRun_MixingStation/) wurde **live, durchgängig** erzeugt: synthetischer S7-300-Altcode → 14-Punkte-Anforderungspaket → bibliotheksbasiertes SCL → **importiert und kompiliert in einem echten TIA Portal V19**.
+
+| 14-Punkte-Paket (Projekt-Dashboard) | Sicherheitsentwurf — `DRAFT_UNVERIFIED` bis zur Freigabe |
+|:---:|:---:|
+| ![Dashboard](docs/img/demo/02_dashboard.png) | ![RD05-Sicherheitsbanner](docs/img/demo/09_rd05_safety_banner.png) |
+| **Von der KI gefundene Sicherheitsfunktionen (RD05)** | **Editierbare IO-Liste (RD01)** |
+| ![RD05-Sicherheitstabelle](docs/img/demo/10_rd05_safety_table.png) | ![IO-Liste](docs/img/demo/08_rd01_io_list.png) |
+| **Freigabe-Sperre mit Mensch im Loop (Gate 3)** | **Kundenseitiger Modernisierungsbericht** |
+| ![Gate-3-Sperre](docs/img/demo/14_gate3_reconciliation.png) | ![Kundenbericht](docs/img/demo/05_customer_report_pdf.png) |
+| **Generierter SCL-Code, kompiliert in TIA Portal V19** | **In TIA importierte IO-Tags** |
+| ![OB_Main in TIA](docs/img/demo/23_tia_ob_main_code.png) | ![TIA-IO-Tags](docs/img/demo/24_tia_io_tags.png) |
+
+*Die KI entwirft jedes Anforderungsdokument als `DRAFT_UNVERIFIED`; SIL/PLr wird niemals geschätzt; die Gate-Sperre kann erst weiterrücken, wenn die kritischen Dokumente eine namentliche Ingenieurfreigabe tragen. Siehe das [Demo-Projekt-README](examples/DemoRun_MixingStation/README.md).*
+
+---
+
+## 🖥️ Ein genauerer Blick
+
+Ein paar weitere Ecken der Workbench — derselbe Live-Lauf, dasselbe Demo-Projekt.
+
+| Gate-1-Freigabe-Workflow | HMI-Verdrahtung — Ingenieur Approve/Reject |
+|:---:|:---:|
+| ![Gate-1-Freigabe](docs/img/demo/03_gate1_discovery_approval.png) | ![HMI-Verdrahtungsfreigabe](docs/img/demo/13_hmi_wiring_approval.png) |
+| **KI-Prompt-Bibliothek (Multi-Plattform)** | **Kuratierte SCL-Bausteinbibliothek** |
+| ![Prompt-Arbeitsbereich](docs/img/demo/06_prompt_workspace.png) | ![Bausteinbibliothek](docs/img/demo/07_block_library.png) |
+| **Multi-Provider-KI-Einstellungen** | **TIA-Portal-/Openness-Einstellungen** |
+| ![Multi-Provider-Einstellungen](docs/img/demo/17_settings_multi_provider.png) | ![TIA-Portal-Einstellungen](docs/img/demo/18_settings_tia_portal.png) |
+
+---
+
 ## 🎯 Ist dieses Tool das Richtige für Sie?
 
 Ehrlicher Geltungsbereich, bevor Sie einen Nachmittag investieren:

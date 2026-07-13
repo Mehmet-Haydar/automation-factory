@@ -46,6 +46,40 @@ modelden değil sahadan geliyor.
 Herhangi bir kısmı işine yararsa, al kullan. Geri bildirim ve düzeltmeler
 memnuniyetle karşılanır.
 
+**Arka plan:** ~2 ay boyunca (Mayıs–Temmuz 2026) tek başıma, AI destekli bir çaba olarak geliştirildi — 15 sürüm (v3.0 → v3.10), 1600+ otomatik test, ilk konseptten gerçek bir makinede uçtan uca kanıtlanmış doğrulanmış bir çekirdeğe. [Changelog](CHANGELOG.md) tüm yolculuğu anlatır.
+
+---
+
+## 🎬 Demo — çalıştığını görün
+
+[`examples/DemoRun_MixingStation/`](examples/DemoRun_MixingStation/) projesi **canlı, uçtan uca** üretildi: sentetik S7-300 eski kodu → 14 Maddelik Gereksinim Paketi → kütüphane-öncelikli SCL → **gerçek bir TIA Portal V19'a aktarıldı ve derlendi**.
+
+| 14 Maddelik Paket (proje panosu) | Güvenlik taslağı — imzalanana kadar `DRAFT_UNVERIFIED` |
+|:---:|:---:|
+| ![Pano](docs/img/demo/02_dashboard.png) | ![RD05 güvenlik banner'ı](docs/img/demo/09_rd05_safety_banner.png) |
+| **AI'nın bulduğu güvenlik fonksiyonları (RD05)** | **Düzenlenebilir IO listesi (RD01)** |
+| ![RD05 güvenlik tablosu](docs/img/demo/10_rd05_safety_table.png) | ![IO listesi](docs/img/demo/08_rd01_io_list.png) |
+| **İnsan-döngüde gate kilidi (Gate 3)** | **Müşteriye sunulan modernizasyon raporu** |
+| ![Gate-3 kilidi](docs/img/demo/14_gate3_reconciliation.png) | ![Müşteri raporu](docs/img/demo/05_customer_report_pdf.png) |
+| **Üretilen SCL, TIA Portal V19'da derlendi** | **TIA'ya aktarılan IO tag'leri** |
+| ![TIA'da OB_Main](docs/img/demo/23_tia_ob_main_code.png) | ![TIA IO tag'leri](docs/img/demo/24_tia_io_tags.png) |
+
+*AI her gereksinim dokümanını `DRAFT_UNVERIFIED` olarak taslaklar; SIL/PLr asla tahmin edilmez; kritik dokümanlar isimli bir mühendis onayı taşımadan gate kilidi ilerleyemez. Bkz. [demo proje README'si](examples/DemoRun_MixingStation/README.md).*
+
+---
+
+## 🖥️ Yakından bakış
+
+Workbench'in birkaç köşesi daha — aynı canlı koşu, aynı demo proje.
+
+| Gate-1 onay iş akışı | HMI kablolama — mühendis Approve/Reject |
+|:---:|:---:|
+| ![Gate-1 onayı](docs/img/demo/03_gate1_discovery_approval.png) | ![HMI kablolama onayı](docs/img/demo/13_hmi_wiring_approval.png) |
+| **AI prompt kütüphanesi (çok-platformlu)** | **Doğrulanmış SCL blok kütüphanesi** |
+| ![Prompt çalışma alanı](docs/img/demo/06_prompt_workspace.png) | ![Blok kütüphanesi](docs/img/demo/07_block_library.png) |
+| **Çok-sağlayıcılı AI ayarları** | **TIA Portal / Openness ayarları** |
+| ![Çok-sağlayıcı ayarları](docs/img/demo/17_settings_multi_provider.png) | ![TIA Portal ayarları](docs/img/demo/18_settings_tia_portal.png) |
+
 ---
 
 ## 🎯 Bu araç size uygun mu?
