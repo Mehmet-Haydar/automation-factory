@@ -1,146 +1,155 @@
 ---
-title: Kunde Müller Conveyor Retrofit — Örnek Proje
+title: Kunde Müller Conveyor Retrofit — Example Project
 last_validated: 2026-05
 status: ACTIVE
 ---
 
-# Kunde Müller Conveyor Retrofit — Örnek Proje
+# Kunde Müller Conveyor Retrofit — Example Project
 
-> ⚠️ **Bu sentetik bir örnek projedir.** Müşteri verisi değil — AUTOMATION_FACTORY'nin nasıl çalıştığını göstermek için tasarlanmış uçtan uca demo.
-
----
-
-## Proje Senaryosu
-
-**Müşteri:** Kunde Müller GmbH (Almanya, Düsseldorf)
-**Makine:** 1995 yılında kurulmuş eski konveyör hattı
-**Eski platform:** Siemens S7-300 (CPU 315-2DP, STEP 7 V5.5 Classic)
-**Yeni platform:** Siemens S7-1500F (CPU 1515F-2 PN, TIA Portal V18)
-**Proje türü:** Retrofit
-**Dil:** Alman müşteri → kod yorumu + HMI = DE
-**Veri sınıfı:** 🟠 CONFIDENTIAL
-
-**Senaryo:**
-- Müşteri eski PLC'sini yenilemek istiyor (yedek parça yok)
-- E-Stop standart Q çıkışından sürülüyor (F-PLC yok) → SAFETY CRITICAL bulgu
-- Konveyör motor + paletizör servo + 2 light curtain
-- HMI panel yenilenecek (eski WinCC Classic → TIA WinCC Unified)
+> ⚠️ **This is a synthetic example project.** Not customer data — an end-to-end
+> demo designed to show how AUTOMATION_FACTORY works. ("Kunde Müller GmbH" and
+> the engineer names are invented.)
 
 ---
 
-## Klasör Yapısı
+## Project Scenario
+
+**Customer:** Kunde Müller GmbH (Germany, Düsseldorf) — *fictional*
+**Machine:** conveyor line installed in 1995
+**Old platform:** Siemens S7-300 (CPU 315-2DP, STEP 7 V5.5 Classic)
+**New platform:** Siemens S7-1500F (CPU 1515F-2 PN, TIA Portal V18)
+**Project type:** Retrofit
+**Language:** German customer → code comments + HMI = DE
+**Data class:** 🟠 CONFIDENTIAL
+
+**Scenario:**
+- The customer wants to modernize the old PLC (no spare parts left).
+- E-Stop is driven from a standard Q output (no F-PLC) → SAFETY CRITICAL finding.
+- Conveyor motor + palletizer servo + 2 light curtains.
+- HMI panel to be renewed (old WinCC Classic → TIA WinCC Unified).
+
+---
+
+## Folder Layout
 
 ```
 Kunde_Mueller_Conveyor_Retrofit/
-├── README.md                          ← bu dosya
-├── PROJECT_MAESTRO.md                 ← proje orkestratör
-├── PROJECT_STATE.json                 ← makine-okunabilir durum
+├── README.md                          ← this file
+├── PROJECT_MAESTRO.md                 ← project orchestrator
+├── PROJECT_STATE.json                 ← machine-readable state
 │
-├── _input/                            ← eski kod (synthetic)
-│   ├── _parsed.md                     ← platform parser çıktısı
-│   ├── old_code_snippet.awl           ← örnek AWL kod parçası
-│   └── operator_manual_excerpt.md     ← operatör notları
+├── _input/                            ← old code (synthetic)
+│   ├── _parsed.md                     ← platform-parser output
+│   ├── old_code_snippet.awl           ← example AWL snippet
+│   └── operator_manual_excerpt.md     ← operator notes
 │
-├── metadata/                          ← 14-Point Raw Data Pack (doldurulmuş)
-│   ├── RD01_IO_List.md             ✅ ÖRNEK
-│   ├── RD02_DataDict.md               ✅ ÖRNEK
-│   ├── RD03_Flowchart.md              (yer tutucu)
-│   ├── RD04_Mode.md                   ✅ ÖRNEK
-│   ├── RD05_Safety_DRAFT_UNVERIFIED.md ✅ ÖRNEK (kritik bulgu)
-│   ├── RD06_Motion.md                 (yer tutucu)
-│   ├── RD07_Timing.md                 (yer tutucu)
-│   ├── RD08_Alarm.md                  ✅ ÖRNEK
-│   ├── RD09_Comms.md                  (yer tutucu)
-│   ├── RD10_FBSpec.md                 ✅ ÖRNEK
-│   ├── RD11_HMI.md                    (yer tutucu)
-│   ├── RD12_UseCase.md                (yer tutucu)
-│   ├── RD13_Annotation.md             ✅ ÖRNEK
-│   └── RD14_Modernization.md          ✅ ÖRNEK (karar matrisi)
+├── metadata/                          ← 14-Point Raw Data Pack (filled)
+│   ├── RD01_IO_List.md             ✅ EXAMPLE
+│   ├── RD02_DataDict.md               ✅ EXAMPLE
+│   ├── RD03_Flowchart.md              (placeholder)
+│   ├── RD04_Mode.md                   ✅ EXAMPLE
+│   ├── RD05_Safety_DRAFT_UNVERIFIED.md ✅ EXAMPLE (critical finding)
+│   ├── RD06_Motion.md                 (placeholder)
+│   ├── RD07_Timing.md                 (placeholder)
+│   ├── RD08_Alarm.md                  ✅ EXAMPLE
+│   ├── RD09_Comms.md                  (placeholder)
+│   ├── RD10_FBSpec.md                 ✅ EXAMPLE
+│   ├── RD11_HMI.md                    (placeholder)
+│   ├── RD12_UseCase.md                (placeholder)
+│   ├── RD13_Annotation.md             ✅ EXAMPLE
+│   └── RD14_Modernization.md          ✅ EXAMPLE (decision matrix)
 │
 └── _output/
-    └── FB_Motor_Conveyor.scl          ✅ Gate-5 örnek SCL (AUTO_VERIFIED_structural | PENDING_TIA_VERIFY)
+    └── FB_Motor_Conveyor.scl          ✅ Gate-5 example SCL (AUTO_VERIFIED_structural | PENDING_TIA_VERIFY)
 ```
 
-> ⚠️ **Bu sentetik bir örnektir.** Metadata (RD*) dosyaları elle/AI ile hazırlanmış
-> taslaklardır; gerçek bir müşteri projesi değildir ve insan onayından geçmemiştir.
-> **Gate 5 çıktısı (`_output/FB_Motor_Conveyor.scl`) yapısal olarak doğrulanmıştır
-> (`AUTO_VERIFIED_structural`) ancak `PENDING_TIA_VERIFY`** — TIA Portal derleme +
-> PLCSIM koşumu YAPILMAMIŞTIR. Üretime alınmadan önce bir mühendis derleyip
-> simüle etmelidir. Örnek, Gate 1–3 + örnek bir Gate 5 SCL taslağını gösterir.
+> ⚠️ **This is a synthetic example.** The metadata (RD*) files are drafts
+> prepared by hand/AI; this is not a real customer project and has not passed
+> human approval. **The Gate-5 output (`_output/FB_Motor_Conveyor.scl`) is
+> structurally verified (`AUTO_VERIFIED_structural`) but `PENDING_TIA_VERIFY`** —
+> no TIA Portal compile + PLCSIM run was performed. An engineer must compile and
+> simulate it before production use. The example shows Gates 1–3 + one example
+> Gate-5 SCL draft.
 
 ---
 
-## Nasıl İncelenir?
+## How to Review
 
 ### 1. PROJECT_MAESTRO.md
-Proje genel durumu ve referansları gösteren ana belge.
+The main document showing overall project status and references.
 
 ### 2. _input/_parsed.md
-Eski S7-300 koddan platform parser AI'ın ürettiği proje özeti. **Bu factory'nin "ilk anlama" çıktısı.**
+The project summary the platform-parser AI produced from the old S7-300 code.
+**This is the factory's "first understanding" output.**
 
 ### 3. metadata/RD01_IO_List.md
-47 sinyal — eski mutlak adresler **yeni naming standardına** dönüştürülmüş.
+47 signals — old absolute addresses mapped to the **new naming standard**.
 
 ### 4. metadata/RD05_Safety_DRAFT_UNVERIFIED.md ⚠️
-**KRİTİK BULGU:** Standart PLC'de E-Stop tespit edildi. AI bu bulguyu RD14'e CRITICAL olarak aktardı.
+**CRITICAL FINDING:** E-Stop detected on a standard PLC. The AI carried this to
+RD14 as CRITICAL.
 
 ### 5. metadata/RD14_Modernization.md
-**Karar matrisi:** Retrofit vs Greenfield vs Hybrid önerisi. SAFETY için F-PLC migrasyonu zorunlu.
+**Decision matrix:** Retrofit vs Greenfield vs Hybrid recommendation. F-PLC
+migration is mandatory for SAFETY.
 
 ### 6. _output/FB_Motor_Conveyor.scl
-Gate 5 örnek SCL çıktısı — RD10 FBSpec'ten türetilmiş, FB_Motor_DOL kütüphane
-pattern'ine dayanan örnek kod (Almanca yorumlu). **Etiket:
-`AUTO_VERIFIED_structural | PENDING_TIA_VERIFY`** — yapısal gate geçti, ama TIA
-derleme + PLCSIM YAPILMADI; üretime almadan önce mühendis doğrulaması şart.
+Gate-5 example SCL — derived from RD10 FBSpec, based on the `FB_Motor_DOL`
+library pattern (German comments). **Label:
+`AUTO_VERIFIED_structural | PENDING_TIA_VERIFY`** — passed the structural gate,
+but TIA compile + PLCSIM were NOT done; engineer verification required before use.
 
 ---
 
-## Pipeline'da Hangi Aşamadayız?
+## Which Pipeline Stage?
 
 ```
-Gate 1 KEŞIF              ✅ Müşteri brief alındı (sentetik)
-Gate 2 ÇIKARTIM           ✅ AI tüm 14 RD taslağını üretti (sentetik)
-Gate 3 HUMAN REVIEW       🔵 İnceleme yapılıyor (RD05 safety mühendis bekliyor)
-Gate 4 VALIDATION         ⏸ RD05 onaylanınca
-Gate 5 KOD ÜRETİMİ        🟡 Örnek SCL üretildi — AUTO_VERIFIED_structural | PENDING_TIA_VERIFY
-Gate 6 SİMÜLASYON         ⏸ Gate 6 (TIA compile + PLCSIM) henüz uygulanmadı
+Gate 1 DISCOVERY          ✅ Customer brief received (synthetic)
+Gate 2 EXTRACTION         ✅ AI drafted all 14 RDs (synthetic)
+Gate 3 HUMAN REVIEW       🔵 Under review (RD05 safety awaits an engineer)
+Gate 4 VALIDATION         ⏸ once RD05 is approved
+Gate 5 CODE GENERATION    🟡 Example SCL produced — AUTO_VERIFIED_structural | PENDING_TIA_VERIFY
+Gate 6 SIMULATION         ⏸ Gate 6 (TIA compile + PLCSIM) not yet applied
 Gate 7 FAT/SAT            ⏸
 ```
 
 ---
 
-## Tespit Edilen Bulgular
+## Findings Detected
 
-| ID | Severity | Kategori | Özet |
-|----|----------|----------|------|
-| FND001 | CRITICAL | SAFETY | Standart PLC'de E-Stop — F-PLC migrasyonu zorunlu |
-| FND002 | MAJOR | NAMING | 47 mutlak adres → semantik tag |
-| FND003 | MAJOR | STRUCTURE | Tüm lojik OB1'de — modüler FB yapısı |
-| FND004 | MAJOR | OBSOLETE_PLATFORM | S7-300 desteği biten platform |
-| FND005 | MINOR | MAINTAINABILITY | %30 yorumsuz kod |
-| FND006 | MINOR | ALARM | FC40 32 alarm bit, ISA-18.2 dışı |
-| FND007 | MINOR | HMI | WinCC Classic, ISA-101 dışı |
-| FND008 | **CRITICAL** | SAFETY | M50.0 Wartungs-Bypass E-Stop'u devre dışı bırakıyor (FC10 NW5) |
-| FND009 | **CRITICAL** | SAFETY | E-Stop yedekliliği sahte: NW5/NW6 asimetrisi |
+| ID | Severity | Category | Summary |
+|----|----------|----------|---------|
+| FND001 | CRITICAL | SAFETY | E-Stop on a standard PLC — F-PLC migration mandatory |
+| FND002 | MAJOR | NAMING | 47 absolute addresses → semantic tags |
+| FND003 | MAJOR | STRUCTURE | All logic in OB1 — no modular FB structure |
+| FND004 | MAJOR | OBSOLETE_PLATFORM | S7-300, end-of-support platform |
+| FND005 | MINOR | MAINTAINABILITY | ~30% uncommented code |
+| FND006 | MINOR | ALARM | FC40 has 32 alarm bits, not ISA-18.2 |
+| FND007 | MINOR | HMI | WinCC Classic, not ISA-101 |
+| FND008 | **CRITICAL** | SAFETY | M50.0 maintenance bypass disables the E-Stop (FC10 NW5) |
+| FND009 | **CRITICAL** | SAFETY | Fake E-Stop redundancy: NW5/NW6 asymmetry |
 
-**Toplam çaba tahmini:** ~192 saat + donanım maliyeti (F-PLC ~€18K)
+**Total effort estimate:** ~192 hours + hardware cost (F-PLC ~€18K)
 
-**Öneri:** GREENFIELD recommended — 3 CRITICAL bulgu (FND001/008/009) F-PLC migrasyonu ile tek seferde çözülür; donanım zaten yenileniyor.
+**Recommendation:** GREENFIELD recommended — the 3 CRITICAL findings
+(FND001/008/009) are solved in one pass by F-PLC migration; the hardware is
+being renewed anyway.
 
 ---
 
 ## Regenerate / Verify this demo (deterministic, no API key)
 
-> Bu bölüm tamamen **deterministik** (AI gerektirmeyen) adımları listeler. Aşağıdaki
-> komutlar **API anahtarı olmadan** çalışır ve fresh bir kullanıcı bu örneği uçtan
-> uca doğrulayabilir. AI gate'leri (Gate 1 KEŞIF / Gate 2 ÇIKARTIM / Gate 5 KOD
-> ÜRETİMİ — Claude/Gemini ile üretim) **API anahtarı ister ve bu runbook'un dışındadır.**
+> This section lists the fully **deterministic** (no-AI) steps. The commands
+> below run **without an API key** so a fresh user can verify this example end
+> to end. The AI gates (Gate 1 DISCOVERY / Gate 2 EXTRACTION / Gate 5 CODE
+> GENERATION — produced with Claude/Gemini) **require an API key and are outside
+> this runbook.**
 >
-> Komutlar repo kökünden (`automation-factory/`) çalıştırılır. Bir test venv
-> varsayılır; yoksa: `python -m venv .venv && .venv/bin/pip install -r requirements.txt`.
-> Aşağıda `python` = o venv'in python'u.
+> Commands run from the repo root (`automation-factory/`). A test venv is
+> assumed; otherwise: `python -m venv .venv && .venv/bin/pip install -r requirements.txt`.
+> Below, `python` = that venv's python.
 
-### 1. Fresh bir iskelet projeyi scaffold et (init smoke-test)
+### 1. Scaffold a fresh skeleton project (init smoke-test)
 
 ```bash
 python 05_SCRIPTS/script_project_init.py \
@@ -148,10 +157,10 @@ python 05_SCRIPTS/script_project_init.py \
   --customer "Test Customer" --output /tmp/init_test --output-lang DE
 ```
 
-Beklenen: exit 0, `metadata/` altında **14 RD şablonu** (`RD01..RD14`) + factory
-referansları. (Bu, bu örneğin türetildiği iskeletin aynısıdır.)
+Expected: exit 0, **14 RD templates** (`RD01..RD14`) under `metadata/` + factory
+references. (This is the same skeleton this example was derived from.)
 
-### 2. Gate-4 naming consistency check (RD01 IO listesi)
+### 2. Gate-4 naming consistency check (RD01 IO list)
 
 ```bash
 python 05_SCRIPTS/dev/script_consistency_check.py \
@@ -160,25 +169,25 @@ python 05_SCRIPTS/dev/script_consistency_check.py \
   --io-file examples/Kunde_Mueller_Conveyor_Retrofit/metadata/RD01_IO_List.xlsx
 ```
 
-Beklenen: exit **1** ve **bulgu listesi** — bu **tasarım gereğidir**. RD01 bir
-Gate-3 `DRAFT`'tır ve **eski (legacy) isimlendirmeyi bilerek içerir**; checker
-`GLOBAL_NAMING_STANDARD.md`'in `TYPE_LOC_NUM_FUNC` formatına uymayan tag'leri
-raporlar (`PC_LOAD_001`, `VAL_V01_OUT`, `LIGHT_GREEN`, `ANALOG_*`, `F_I_EStop_*`
-vb.). Bu tam olarak **FND002 (NAMING / MAJOR)** bulgusudur — retrofit/greenfield
-migrasyonunda çözülür (bkz. `metadata/RD14_Modernization.md`). Standarda zaten uyan
-`MOT_CV01_001_*` tag'leri temiz geçer. **Bu bulgular örneğin pedagojik içeriğidir;
-"düzeltilmemelidir".**
+Expected: exit **1** with a **findings list** — this is **by design**. RD01 is a
+Gate-3 `DRAFT` and **deliberately contains the legacy naming**; the checker
+reports tags not matching the `TYPE_LOC_NUM_FUNC` format of
+`GLOBAL_NAMING_STANDARD.md` (`PC_LOAD_001`, `VAL_V01_OUT`, `LIGHT_GREEN`,
+`ANALOG_*`, `F_I_EStop_*` …). This is exactly **FND002 (NAMING / MAJOR)** —
+resolved during retrofit/greenfield migration (see `metadata/RD14_Modernization.md`).
+Tags that already comply (`MOT_CV01_001_*`) pass clean. **These findings are the
+example's pedagogical content; they "must not be fixed".**
 
-### 3. Address conflict check (henüz TODO)
+### 3. Address conflict check (still TODO)
 
 ```bash
 python 05_SCRIPTS/dev/script_consistency_check.py \
   --project examples/Kunde_Mueller_Conveyor_Retrofit --check-addresses
 ```
 
-Beklenen: exit 1 + "`--check-naming or --check-addresses required.`" — `--check-addresses`
-bayrağı henüz **implement edilmemiş bir TODO**'dur (checker'ın `--help`'inde de
-`(TODO)` olarak işaretli). Bu bir örnek-veri hatası değil, araç sınırlamasıdır.
+Expected: exit 1 + "`--check-naming or --check-addresses required.`" — the
+`--check-addresses` flag is a **not-yet-implemented TODO** (also marked `(TODO)`
+in the checker's `--help`). This is a tool limitation, not an example-data error.
 
 ### 4. IO-list MD ↔ XLSX round-trip
 
@@ -196,50 +205,53 @@ print(f"OK: {len(md_rows)} rows, MD and XLSX tags match")
 PY
 ```
 
-Beklenen: exit 0, `OK: 26 rows, MD and XLSX tags match`. (Örnek RD01 tablosu 26
-gösterim satırı içerir + "…22 more signals…" yer tutucusu; gerçek listede 47 sinyal.)
+Expected: exit 0, `OK: 26 rows, MD and XLSX tags match`. (The example RD01 table
+has 26 display rows + a "…22 more signals…" placeholder; the real list has 47
+signals.)
 
-### 5. Schema validator — kapsam notu
+### 5. Schema validator — scope note
 
-`05_SCRIPTS/dev/script_md_schema_validator.py` yalnızca `PROMPT_CODE_GEN` ve
-`DOMAIN_REFERENCE` şemalarını bilir; **RD metadata (RAWDATA) şemaları bu deterministik
-araçta kayıtlı değildir**, dolayısıyla bu örneğin `metadata/RD*.md` dosyaları bu
-validator kapsamı dışındadır (bir örnek-veri hatası değil, araç kapsamıdır).
+`05_SCRIPTS/dev/script_md_schema_validator.py` only knows the `PROMPT_CODE_GEN`
+and `DOMAIN_REFERENCE` schemas; the **RD metadata (RAWDATA) schemas are not
+registered in this deterministic tool**, so this example's `metadata/RD*.md`
+files are outside this validator's scope (a tool scope, not an example-data error).
 
-### 6. Tüm test paketi
+### 6. Full test suite
 
 ```bash
 python -m pytest -q
 ```
 
-Beklenen: **725 passed, 1 skipped**.
+Expected: **725 passed, 1 skipped**.
 
 ---
 
-## Bu Örnek Sayesinde Görebilecekleriniz
+## What This Example Shows You
 
-1. **AI extraction nasıl bir _parsed.md üretir** → `_input/_parsed.md`
-2. **14-Point Pack nasıl görünür** → `metadata/RD*.md`
-3. **Almanca/Türkçe/İngilizce multi-lang nasıl korunur** → her dosyada `(orig: ...)` formatı
-4. **Safety neden insan onayı gerektirir** → `RD05_Safety_DRAFT_UNVERIFIED.md`
-5. **Modernizasyon kararı nasıl verilir** → `RD14_Modernization.md` ModernizationDecision tablosu
-6. **Gate 5 SCL çıktısı nasıl görünür** → `_output/FB_Motor_Conveyor.scl` (yapısal-doğrulanmış örnek)
+1. **How AI extraction produces a _parsed.md** → `_input/_parsed.md`
+2. **What the 14-Point Pack looks like** → `metadata/RD*.md`
+3. **How German/Turkish/English multi-lang is preserved** → `(orig: ...)` format in each file
+4. **Why safety needs human approval** → `RD05_Safety_DRAFT_UNVERIFIED.md`
+5. **How the modernization decision is made** → `RD14_Modernization.md` ModernizationDecision table
+6. **What Gate-5 SCL output looks like** → `_output/FB_Motor_Conveyor.scl` (structurally-verified example)
 
-> Not: Gate 6 (TIA derleme + PLCSIM) ve sonrası bu sentetik örneğe dahil değildir;
-> Gate 5 SCL örneği `PENDING_TIA_VERIFY` etiketlidir (mühendis doğrulaması gerekir).
-
----
-
-## Gerçek Müşteri Projesi vs Bu Örnek
-
-| | Bu Örnek | Gerçek Proje |
-|--|----------|--------------|
-| Müşteri adı | "Kunde Müller GmbH" (uydurma) | Gerçek müşteri |
-| Veriler | Sentetik (47 sinyal demo) | Yüzlerce/binlerce sinyal |
-| Süre | Tek günde üretildi (factory demo) | 2-6 ay (proje complexity'sine göre) |
-| Onaylar | İnsan onayı YOK (örnek) | Her gate'te insan onayı zorunlu |
-| Safety | Demo amaçlı | Sertifikalı mühendis + TÜV süreci |
+> Note: Gate 6 (TIA compile + PLCSIM) and beyond are not part of this synthetic
+> example; the Gate-5 SCL example is labelled `PENDING_TIA_VERIFY` (engineer
+> verification required).
 
 ---
 
-*Bu örnek factory'nin kapasitesini gösterir. Gerçek müşteri projeleri bu kalıba uyar ama her zaman insan mühendis denetiminde yürütülür.*
+## Real Customer Project vs This Example
+
+| | This example | Real project |
+|--|--------------|--------------|
+| Customer name | "Kunde Müller GmbH" (invented) | Real customer |
+| Data | Synthetic (47-signal demo) | Hundreds/thousands of signals |
+| Duration | Produced in one day (factory demo) | 2–6 months (per project complexity) |
+| Approvals | NO human approval (example) | Human approval at every gate |
+| Safety | Demo purpose | Certified engineer + TÜV process |
+
+---
+
+*This example shows the factory's capabilities. Real customer projects follow
+this pattern but are always run under a human engineer's supervision.*

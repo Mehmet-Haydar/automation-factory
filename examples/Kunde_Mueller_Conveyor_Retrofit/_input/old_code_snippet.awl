@@ -21,12 +21,12 @@ TITLE = NW5: NOT-AUS Nord Logik
 // E-Stop ist über Q3.7 verkabelt - kein F-PLC vorhanden
       A     I    100.0        // NOT-AUS Nord (NC kontakt)
       A     I    100.1        // NOT-AUS Süd (NC kontakt)
-      AN    M     50.0        // Wartungs-Bypass (TEHLIKELI!)
+      AN    M     50.0        // Wartungs-Bypass (DANGEROUS!)
       =     Q      3.7        // Hauptschütz (master contactor)
 
 NETWORK
 TITLE = NW6: NOT-AUS Süd parallel
-// Aynı lojik tekrar (yedeklilik?)
+// Same logic repeated (redundancy?)
       A     I    100.0
       A     I    100.1
       =     M     50.7        // Internal E-Stop flag
@@ -64,16 +64,16 @@ NETWORK
 TITLE = Schritt 10 Start
       A     I      0.0        // Start button
       A     DB10.DBX 0.1      // AUTO mode
-      AN    M     10.1        // Schritt 20 değil
-      AN    M     10.2        // Schritt 30 değil
-      S     M     10.0        // Schritt 10 başlat
+      AN    M     10.1        // not Schritt 20
+      AN    M     10.2        // not Schritt 30
+      S     M     10.0        // start Schritt 10
 
 NETWORK
 TITLE = Schritt 10 -> Schritt 20
       A     M     10.0
       A     T      1          // Timer T1 dolu (3s)
       R     M     10.0
-      S     M     10.1        // Schritt 20'ye geç
+      S     M     10.1        // go to Schritt 20
 
 NETWORK
 TITLE = Schritt 20 -> Schritt 30
@@ -82,17 +82,17 @@ TITLE = Schritt 20 -> Schritt 30
       R     M     10.1
       S     M     10.2
 
-// ... (devamı — sequence devam eder M10.0..M10.7)
+// ... (continues - sequence runs M10.0..M10.7)
 
 END_FUNCTION
 
 
 // ============================================================================
-// Bu kod örneği gerçek bir 1995 S7-300 retrofit projesinin tipik karakterini
-// gösterir. AI extractor bu kodu okuyup:
-//  - 47 mutlak adresi tespit ediyor (NAMING bulgu)
-//  - 4 SAFETY_LOGIC bloğu işaretliyor (SAFETY CRITICAL)
-//  - Manuel state machine M-bit pattern'i çıkarıyor (FLOWCHART için)
-//  - Almanca yorumları AYNEN koruyor
-//  - Dead code, magic number'lar WarningFlag ile etiketliyor
+// This code sample shows the typical character of a real 1995 S7-300 retrofit
+// project. The AI extractor reads it and:
+//  - detects 47 absolute addresses (NAMING finding)
+//  - flags 4 SAFETY_LOGIC blocks (SAFETY CRITICAL)
+//  - extracts the manual state-machine M-bit pattern (for the FLOWCHART)
+//  - preserves the German comments VERBATIM
+//  - tags dead code and magic numbers with a WarningFlag
 // ============================================================================

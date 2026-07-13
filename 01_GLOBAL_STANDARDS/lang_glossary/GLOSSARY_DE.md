@@ -10,7 +10,7 @@ last_validated: 2026-05
 
 # GLOSSARY_DE.md — Deutsche Begriffe
 
-> Deutsche Entsprechungen. Eski Alman makine kodu için **kritik** referans. Base: `GLOSSARY_BASE.md`.
+> Deutsche Entsprechungen. **Kritische** Referenz fuer alten deutschen Maschinencode. Base: `GLOSSARY_BASE.md`.
 
 ---
 

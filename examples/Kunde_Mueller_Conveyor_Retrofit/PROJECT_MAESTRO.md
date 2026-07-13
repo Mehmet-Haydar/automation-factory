@@ -13,29 +13,30 @@ last_validated: 2026-05
 
 # PROJECT_MAESTRO.md — Kunde_Mueller_Conveyor_Retrofit
 
-> Bu proje **AUTOMATION_FACTORY** v3.0.0-alpha standartlarına göre yönetilir.
+> This project is managed to the **AUTOMATION_FACTORY** v3.0.0-alpha standards.
+> *(Synthetic example — customer, engineers and dates are invented.)*
 
 ---
 
-## 1. Proje Meta
+## 1. Project Meta
 
-| Alan | Değer |
+| Field | Value |
 |------|-------|
 | Project ID | KMG-2026-001 |
-| Müşteri | Kunde Müller GmbH (Düsseldorf, DE) |
-| Tip | RETROFIT |
-| Başlangıç | 2026-05-01 |
-| Hedef SAT | 2026-09-30 |
-| Veri sınıfı | 🟠 CONFIDENTIAL |
+| Customer | Kunde Müller GmbH (Düsseldorf, DE) |
+| Type | RETROFIT |
+| Start | 2026-05-01 |
+| Target SAT | 2026-09-30 |
+| Data class | 🟠 CONFIDENTIAL |
 | Output language | DE (Deutsch) |
 | Project Lead | Mehmet Haydar |
-| Safety Engineer | Hans Becker (TÜV sert.) |
+| Safety Engineer | Hans Becker (TÜV cert.) |
 
 ---
 
-## 2. Factory Referansları
+## 2. Factory References
 
-| Tip | Dosya | Sürüm |
+| Type | File | Version |
 |-----|-------|-------|
 | Pipeline | `PIPELINE_CODE_REWRITE.md` | v1.0.0 |
 | Naming | `01_GLOBAL_STANDARDS/rules/GLOBAL_NAMING_STANDARD.md` | v1.0 |
@@ -47,68 +48,68 @@ last_validated: 2026-05
 
 ---
 
-## 3. Pipeline Gate İlerleme
+## 3. Pipeline Gate Progress
 
 ```
-Gate 1 KEŞIF             [completed]  2026-05-01
-Gate 2 ÇIKARTIM          [completed]  2026-05-15 (AI extraction + parsing)
+Gate 1 DISCOVERY         [completed]  2026-05-01
+Gate 2 EXTRACTION        [completed]  2026-05-15 (AI extraction + parsing)
 Gate 3 HUMAN REVIEW      [in_progress] 2026-05-15..06-15 (RD05 safety eng.)
 Gate 4 VALIDATION        [pending]
-Gate 5 KOD ÜRETİMİ       [in_progress] (örnek FB_Motor üretildi)
-Gate 6 SİMÜLASYON        [pending]    PLCSIM Advanced ortamı kurulacak
+Gate 5 CODE GENERATION   [in_progress] (example FB_Motor produced)
+Gate 6 SIMULATION        [pending]    PLCSIM Advanced environment to be set up
 Gate 7 FAT/SAT           [pending]    FAT 2026-09-01, SAT 2026-09-15
 ```
 
 ---
 
-## 4. 14-Point Raw Data Pack Durumu
+## 4. 14-Point Raw Data Pack Status
 
-| RD | Dosya | Status | Kaynak | Yüzde |
+| RD | File | Status | Source | Percent |
 |----|-------|--------|--------|-------|
 | RD01 | RD01_IO_List.md | DRAFT (AI) | AI extractor (S7-300 parser) | 90% |
 | RD02 | RD02_DataDict.md | DRAFT (AI) | AI extractor | 85% |
 | RD03 | RD03_Flowchart.md | DRAFT | (placeholder) | 20% |
-| RD04 | RD04_Mode.md | DRAFT (AI) | AI + operatör görüşmesi | 80% |
-| RD05 | RD05_Safety_DRAFT_UNVERIFIED.md | **DRAFT_UNVERIFIED** | AI — **Eng. Becker inceleme** | 60% |
+| RD04 | RD04_Mode.md | DRAFT (AI) | AI + operator interview | 80% |
+| RD05 | RD05_Safety_DRAFT_UNVERIFIED.md | **DRAFT_UNVERIFIED** | AI — **Eng. Becker review** | 60% |
 | RD06 | RD06_Motion.md | DRAFT | (placeholder) | 30% |
 | RD07 | RD07_Timing.md | DRAFT | (placeholder) | 30% |
 | RD08 | RD08_Alarm.md | DRAFT (AI) | AI + WinCC export | 75% |
 | RD09 | RD09_Comms.md | DRAFT | (placeholder) | 40% |
-| RD10 | RD10_FBSpec.md | DRAFT (AI) | AI + manuel | 70% |
+| RD10 | RD10_FBSpec.md | DRAFT (AI) | AI + manual | 70% |
 | RD11 | RD11_HMI.md | DRAFT | (placeholder) | 30% |
-| RD12 | RD12_UseCase.md | DRAFT | (placeholder, workshop bekliyor) | 25% |
+| RD12 | RD12_UseCase.md | DRAFT | (placeholder, awaiting workshop) | 25% |
 | RD13 | RD13_Annotation.md | DRAFT (AI) | AI annotation | 50% |
-| RD14 | RD14_Modernization.md | DRAFT (AI) | AI + müşteri kararı | 80% |
+| RD14 | RD14_Modernization.md | DRAFT (AI) | AI + customer decision | 80% |
 
-**Kapsamlı RD durumu (örnek için):** 5 RD detaylı doldurulmuş, 9 RD placeholder.
+**Overall RD status (for this example):** 5 RDs filled in detail, 9 RDs placeholder.
 
 ---
 
-## 5. Proje-Özel Kararlar
+## 5. Project-Specific Decisions
 
-| Tarih | Karar | Sebep | Karar Sahibi |
+| Date | Decision | Reason | Decided by |
 |-------|-------|-------|--------------|
-| 2026-05-02 | Output lang: DE | Müşteri Alman, operatörler Almanca konuşuyor | Müşteri |
-| 2026-05-08 | F-PLC migrasyonu zorunlu | RD05 SAFETY CRITICAL bulgu | Safety Eng. + Müşteri |
-| 2026-05-10 | GREENFIELD önerildi (Retrofit yerine) | Donanım eskidi + F-PLC ek maliyet zaten gerekli | RD14 karar matrisi |
+| 2026-05-02 | Output lang: DE | Customer is German, operators speak German | Customer |
+| 2026-05-08 | F-PLC migration mandatory | RD05 SAFETY CRITICAL finding | Safety Eng. + Customer |
+| 2026-05-10 | GREENFIELD recommended (over Retrofit) | Hardware obsolete + F-PLC extra cost needed anyway | RD14 decision matrix |
 
 ---
 
-## 6. Veri Sınıflandırma + AI Politikası
+## 6. Data Classification + AI Policy
 
 ```
 data_classification: CONFIDENTIAL (🟠)
 ```
 
-| Sınıf | Uygulanan |
+| Class | Applied |
 |-------|-----------|
-| 🟠 CONFIDENTIAL | Self-hosted Claude API (Anthropic Bedrock) kullanılıyor |
-| 🟠 CONFIDENTIAL | Cursor Enterprise tier (kod) |
-| 🟠 CONFIDENTIAL | Public AI servisleri (ChatGPT.com, claude.ai web) **YASAK** |
+| 🟠 CONFIDENTIAL | Self-hosted Claude API (Anthropic Bedrock) used |
+| 🟠 CONFIDENTIAL | Cursor Enterprise tier (code) |
+| 🟠 CONFIDENTIAL | Public AI services (ChatGPT.com, claude.ai web) **FORBIDDEN** |
 
 ---
 
-## 7. Safety (RD05) İzleme ⚠️
+## 7. Safety (RD05) Tracking ⚠️
 
 ```yaml
 safety_engineer:
@@ -121,12 +122,12 @@ risk_assessment:
   document_id: KMG-RA-2026-001
   date: 2026-05-08
   iso_12100: COMPLETED
-  result: SIL2 / PLr_d gereksinim (E-Stop)
+  result: SIL2 / PLr_d requirement (E-Stop)
 
 sil_requirements:
   - function: SF001 EStop_Operator_Panel
     required: SIL2 / PLr_d
-    achieved: PENDING (F-PLC migrasyonu sonrası)
+    achieved: PENDING (after F-PLC migration)
     status: DRAFT_UNVERIFIED
   - function: SF002 LightCurtain_Loading_Zone
     required: SIL3 / PLr_e
@@ -136,9 +137,9 @@ sil_requirements:
 
 ---
 
-## 8. Ekip + Sorumluluk
+## 8. Team + Responsibility
 
-| Rol | İsim |
+| Role | Name |
 |-----|------|
 | Project Lead | Mehmet Haydar |
 | Lead Engineer | Mehmet Haydar |
@@ -148,38 +149,38 @@ sil_requirements:
 
 ---
 
-## 9. Risk Kaydı
+## 9. Risk Register
 
-| Risk | Olasılık | Etki | Azaltma |
+| Risk | Likelihood | Impact | Mitigation |
 |------|----------|------|---------|
-| F-PLC tedariki gecikme | Orta | Yüksek | Önceden sipariş (Siemens lead time 8-12 hafta) |
-| Almanca terminoloji tutarsızlığı | Düşük | Orta | Glossary kullan + müşteri review |
-| Eski kod yorumsuz | Yüksek | Orta | RD13 Annotation + operatör görüşmesi |
-| TÜV süreci uzaması | Orta | Yüksek | Erken safety eng. sürece dahil |
+| F-PLC supply delay | Medium | High | Order early (Siemens lead time 8-12 weeks) |
+| German terminology inconsistency | Low | Medium | Use glossary + customer review |
+| Uncommented legacy code | High | Medium | RD13 Annotation + operator interview |
+| TÜV process delay | Medium | High | Involve safety eng. early |
 
 ---
 
-## 10. Sprint Kaydı
+## 10. Sprint Log
 
-| Sprint | Hedef | Status |
+| Sprint | Goal | Status |
 |--------|-------|--------|
-| 2026-W18 | Müşteri brief + Gate 1 | ✅ |
-| 2026-W19 | _input toplama + AI extraction | ✅ |
-| 2026-W20-21 | Gate 3 review + safety analiz | 🔵 |
-| 2026-W22-23 | RD14 final + müşteri karar | ⏳ |
-| 2026-W24-30 | Gate 5 kod üretimi | ⏳ |
-| 2026-W31-35 | Gate 6 simülasyon | ⏳ |
+| 2026-W18 | Customer brief + Gate 1 | ✅ |
+| 2026-W19 | _input collection + AI extraction | ✅ |
+| 2026-W20-21 | Gate 3 review + safety analysis | 🔵 |
+| 2026-W22-23 | RD14 final + customer decision | ⏳ |
+| 2026-W24-30 | Gate 5 code generation | ⏳ |
+| 2026-W31-35 | Gate 6 simulation | ⏳ |
 | 2026-W36 | Gate 7 FAT | ⏳ |
-| 2026-W39 | SAT + teslim | ⏳ |
+| 2026-W39 | SAT + delivery | ⏳ |
 
 ---
 
-## 11. Notlar
+## 11. Notes
 
-- Müşteri Alman dilinde tüm dokümantasyon istiyor (FAT report + Operator Manual)
-- F-PLC migrasyonu için ek bütçe onaylandı (€18K donanım + ~80h mühendislik)
-- Eski makinenin elektrik şemaları EPLAN P8 (.zw1) elimizde
+- Customer wants all documentation in German (FAT report + Operator Manual)
+- Extra budget approved for F-PLC migration (€18K hardware + ~80h engineering)
+- The old machine's electrical schematics are on hand as EPLAN P8 (.zw1)
 
 ---
 
-*Bu dosya canlıdır. Her gate ilerlemesinde güncellenir.*
+*This file is live. It is updated at every gate advancement.*
