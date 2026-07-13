@@ -45,7 +45,7 @@ pytest>=9.1.1,<10.0
 pytest-cov>=7.1.0,<8.0
 
 # Linting (for development)
-ruff>=0.1.0,<1.0
+ruff>=0.15.21,<1.0
 mypy>=2.2.0,<3.0
 
 # PDF output (customer_report, FAT/SAT protocols, CE assessment — pdf_common.py)
