@@ -178,25 +178,25 @@ class TestPromoteToValidatedFailClosed:
 
     def test_empty_evidence_rejected(self, tmp_path):
         """Boş kanıt yolu → LifecyclePromoteError (fail-closed)."""
-        with pytest.raises(LifecyclePromoteError, match="kanıt yolu boş"):
+        with pytest.raises(LifecyclePromoteError, match="evidence path is empty"):
             promote_to_validated("FB_Motor_DOL", "", "Muhendis A")
 
     def test_whitespace_evidence_rejected(self, tmp_path):
         """Boşluk-dolu kanıt yolu → LifecyclePromoteError (fail-closed)."""
-        with pytest.raises(LifecyclePromoteError, match="kanıt yolu boş"):
+        with pytest.raises(LifecyclePromoteError, match="evidence path is empty"):
             promote_to_validated("FB_Motor_DOL", "   ", "Muhendis A")
 
     def test_empty_engineer_rejected(self, tmp_path):
         """Boş mühendis adı → LifecyclePromoteError (fail-closed)."""
         evidence = tmp_path / "evidence.txt"
         evidence.write_text("PLCSIM log", encoding="utf-8")
-        with pytest.raises(LifecyclePromoteError, match="mühendis adı boş"):
+        with pytest.raises(LifecyclePromoteError, match="engineer name is empty"):
             promote_to_validated("FB_Motor_DOL", str(evidence), "")
 
     def test_nonexistent_evidence_file_rejected(self, tmp_path):
         """Var olmayan kanıt yolu → LifecyclePromoteError (fail-closed)."""
         nonexistent = str(tmp_path / "nonexistent_plcsim_log.txt")
-        with pytest.raises(LifecyclePromoteError, match="kanıt dosyası bulunamadı"):
+        with pytest.raises(LifecyclePromoteError, match="evidence file not found"):
             promote_to_validated("FB_Motor_DOL", nonexistent, "Muhendis A")
 
     def test_unknown_block_raises_file_not_found(self, tmp_path):

@@ -40,16 +40,17 @@ class LifecyclePromoteError(Exception):
 
 
 def get_block_lifecycle(block_name: str) -> str:
-    """Bloğun kontrattaki lifecycle değerini döndür.
+    """Return the block's lifecycle value from its contract.
 
-    Kontrat bulunamazsa, okunamazsa veya alan yoksa fail-safe: ``"DRAFT"`` döner.
-    Bu, bilinmeyen blokların her zaman DRAFT uyarısı üretmesini garantiler.
+    Fail-safe: returns ``"DRAFT"`` if the contract is missing, unreadable, or
+    the field is absent. This guarantees unknown blocks always surface a DRAFT
+    warning.
 
     Args:
-        block_name: Kontrat dosyası stem'i (örn. ``"FB_Motor_DOL"``).
+        block_name: Contract file stem (e.g. ``"FB_Motor_DOL"``).
 
     Returns:
-        Lifecycle string; geçersiz/eksik durumda ``"DRAFT"``.
+        Lifecycle string; ``"DRAFT"`` on any invalid/missing state.
     """
     try:
         candidates = list(CONTRACTS_ROOT.rglob(f"{block_name}.contract.json"))
@@ -90,25 +91,25 @@ def promote_to_validated(
     # --- fail-closed: evidence and engineer name required ---
     if not evidence_path or not evidence_path.strip():
         raise LifecyclePromoteError(
-            f"Lifecycle yükseltme reddedildi: '{block_name}' için kanıt yolu boş. "
-            "PLCSIM koşum logu veya test raporu yolu zorunludur (B-P1 politikası)."
+            f"Lifecycle promotion refused: evidence path is empty for '{block_name}'. "
+            "A PLCSIM run log or test report path is mandatory (B-P1 policy)."
         )
     if not engineer_name or not engineer_name.strip():
         raise LifecyclePromoteError(
-            f"Lifecycle yükseltme reddedildi: '{block_name}' için mühendis adı boş. "
-            "Yükseltmeyi onaylayan mühendis adı zorunludur (B-P1 politikası)."
+            f"Lifecycle promotion refused: engineer name is empty for '{block_name}'. "
+            "The name of the engineer approving the promotion is mandatory (B-P1 policy)."
         )
     evidence = Path(evidence_path)
     if not evidence.exists():
         raise LifecyclePromoteError(
-            f"Lifecycle yükseltme reddedildi: '{block_name}' — kanıt dosyası bulunamadı: "
-            f"'{evidence_path}'. Gerçek bir PLCSIM/test raporu yolu belirtilmelidir."
+            f"Lifecycle promotion refused for '{block_name}' — evidence file not found: "
+            f"'{evidence_path}'. A real PLCSIM/test report path must be provided."
         )
 
     candidates = list(CONTRACTS_ROOT.rglob(f"{block_name}.contract.json"))
     if not candidates:
         raise FileNotFoundError(
-            f"Kontrat dosyası bulunamadı: '{block_name}.contract.json'"
+            f"Contract file not found: '{block_name}.contract.json'"
         )
     contract_path = candidates[0]
     try:

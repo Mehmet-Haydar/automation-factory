@@ -616,18 +616,18 @@ def assemble_program(project_root: Path,
                 res.warnings.append(f"library block {stem} not found — skipped")
                 continue
             cpath = None
-            block_lifecycle = "DRAFT"  # fail-safe: kontratsız blok → DRAFT
+            block_lifecycle = "DRAFT"  # fail-safe: block with no contract → DRAFT
         else:
             src, cpath = entry["scl_path"], entry["contract_path"]
             block_lifecycle = _get_lifecycle_from_entry(entry)
 
-        # S-15 / B-P1: DRAFT lifecycle uyarısı — üretimi DURDURMA, sadece uyar.
+        # S-15 / B-P1: DRAFT lifecycle warning — do NOT stop generation, just warn.
         if block_lifecycle != "VALIDATED":
             res.warnings.append(
                 f"WARNING [S-15/B-P1] library block '{stem}' lifecycle={block_lifecycle!r} — "
-                "PLCSIM/test kanıtlı doğrulama tamamlanmamış. "
-                "VALIDATED değilse saha kullanımı öncesi mühendis onayı gerekir. "
-                "(promote_to_validated() ile lifecycle yükseltilebilir)"
+                "PLCSIM/test-evidenced verification not yet completed. "
+                "If not VALIDATED, engineer approval is required before field use. "
+                "(lifecycle can be promoted via promote_to_validated())"
             )
 
         dst = out_dir / src.name

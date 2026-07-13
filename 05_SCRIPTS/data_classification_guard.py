@@ -126,16 +126,16 @@ def provider_allowed(classification, provider, settings=None) -> AIGateResult:
     if _provider_is_enterprise(prov, settings):
         return AIGateResult(
             allowed=True,
-            reason=f"CONFIDENTIAL — '{prov}' enterprise/self-hosted olarak işaretli.",
+            reason=f"CONFIDENTIAL — '{prov}' is marked enterprise/self-hosted.",
             requires_consent=False,
         )
     if prov in PUBLIC_PROVIDERS:
         return AIGateResult(
             allowed=False,
             reason=(
-                f"CONFIDENTIAL veri '{prov}' ile paylaşmak için mühendis onayı gerekiyor. "
-                "Onay verirseniz sorumluluk size geçer ve AI_DECISION_LOG'a kaydedilir. "
-                "(RESTRICTED veriler için onay seçeneği yoktur.)"
+                f"Sharing CONFIDENTIAL data with '{prov}' requires engineer consent. "
+                "Giving consent transfers responsibility to you and is recorded in AI_DECISION_LOG. "
+                "(There is no consent option for RESTRICTED data.)"
             ),
             requires_consent=True,
         )

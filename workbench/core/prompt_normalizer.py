@@ -90,14 +90,14 @@ def normalize_prompt(
         _allowed, _reason = _check_ai_send(project_root, provider or "")
         if not _allowed:
             raise NormalizeError(
-                f"[IP_LEAKAGE] Veri sınıflandırma kapısı engelledi — "
-                f"normalize_prompt çalıştırılamaz: {_reason}"
+                f"[IP_LEAKAGE] Data classification guard blocked this — "
+                f"normalize_prompt cannot run: {_reason}"
             )
     else:
-        # Guard modülü yüklenemedi → fail-closed
+        # Guard module failed to load → fail-closed
         raise NormalizeError(
-            "[IP_LEAKAGE] data_classification_guard modülü yüklenemedi — "
-            "fail-closed: normalize_prompt çalıştırılamaz."
+            "[IP_LEAKAGE] data_classification_guard module failed to load — "
+            "fail-closed: normalize_prompt cannot run."
         )
 
     system = _SYSTEM_PROMPT.format(

@@ -48,7 +48,7 @@ class TestExportClassificationGate:
 
     def test_confidential_blocked_without_consent(self, tmp_path):
         proj = _proj(tmp_path, "CONFIDENTIAL")
-        with pytest.raises(TIAExportClassificationError, match="onay"):
+        with pytest.raises(TIAExportClassificationError, match="consent"):
             tia_export._check_project_classification_for_export(proj)
 
     def test_confidential_allowed_with_consent(self, tmp_path):

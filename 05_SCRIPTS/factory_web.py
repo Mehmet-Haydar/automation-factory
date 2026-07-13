@@ -3928,9 +3928,9 @@ verified: NOT_VERIFIED
                 try:
                     r = self.rd03_regen_mermaid()
                     if r.get("ok"):
-                        job["lines"].append(f"\n⟳ RD03 Mermaid otomatik üretildi — {r.get('msg','')}")
+                        job["lines"].append(f"\n⟳ RD03 Mermaid auto-regenerated — {r.get('msg','')}")
                     else:
-                        job["lines"].append(f"\n⚠ RD03 Mermaid üretilemedi: {r.get('error','')}")
+                        job["lines"].append(f"\n⚠ RD03 Mermaid regeneration failed: {r.get('error','')}")
                 except Exception as _e:
                     job["lines"].append(f"\n⚠ RD03 Mermaid auto-regen hata: {_e}")
 
@@ -5487,10 +5487,10 @@ verified: NOT_VERIFIED
                     ", ".join(allowed) if allowed else "(kontrat listesi yok)"
                 )
                 return (
-                    f"TIA versiyonu '{version}' kontratta listelenmemiş "
-                    f"[kontrat: {listed_str}]. "
-                    "Göndermek için: mühendis adı girin ve "
-                    "'version_approved': true onayını ekleyin "
+                    f"TIA version '{version}' is not listed in the contract "
+                    f"[contract: {listed_str}]. "
+                    "To send: enter the engineer's name and add "
+                    "'version_approved': true "
                     "(consent.version_approved + consent.engineer)."
                 )
         return None

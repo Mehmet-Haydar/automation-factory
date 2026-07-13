@@ -85,14 +85,14 @@ def _check_project_classification_for_export(
 
     if classification == "RESTRICTED":
         raise TIAExportClassificationError(
-            f"RESTRICTED proje TIA dışa aktarımı reddedildi: {project_path}. "
-            "Bu seviye için consent mekanizması ÇALIŞMAZ — her zaman bloklanır."
+            f"TIA export refused for RESTRICTED project: {project_path}. "
+            "The consent mechanism does NOT apply at this level — always blocked."
         )
     if classification == "CONFIDENTIAL" and not local_transfer_consent:
         raise TIAExportClassificationError(
-            f"CONFIDENTIAL proje TIA dışa aktarımı mühendis onayı gerektirir: "
-            f"{project_path}. Lokal aktarım onayını verin (AI_DECISION_LOG'a "
-            "yazılır) veya PROJECT_STATE.json sınıflandırmasını düzeltin."
+            f"TIA export of a CONFIDENTIAL project requires engineer consent: "
+            f"{project_path}. Give local-transfer consent (recorded in "
+            "AI_DECISION_LOG) or correct the classification in PROJECT_STATE.json."
         )
 
 
