@@ -1,0 +1,189 @@
+// ============================================================================
+//  ANLAGE:    Mischstation MX-2   (Foerderband + Ruehrbehaelter)
+//  STEUERUNG: Siemens S7-300  CPU 314  (STEP 7 V5.x Classic, AWL/STL)
+//  BAUJAHR:   1997      LETZTE AENDERUNG: 2013-04 (Modbus entfernt)
+//  AUTOR:     synthetisches Lehrbeispiel — KEIN reales Kundenprojekt
+//  HINWEIS:   Sicherheitslogik ueber Standard-CPU (KEIN F-CPU vorhanden!)
+// ============================================================================
+//  Frei erfundenes Beispiel typischer 1990er-Retrofit-Muster (Stern-Dreieck,
+//  Schrittkette, Analog-Heizung, Alarmbits). Keine patent-/urheberrechtlich
+//  geschuetzten Inhalte — reine Standard-Automatisierungstechnik.
+// ============================================================================
+//
+// ---- Symbol-Zuordnung (Zuordnungsliste, Auszug) ----------------------------
+//  E 0.0  Start-Taster              E 1.0  NOT-AUS Nord   (Oeffner)
+//  E 0.1  Stop-Taster               E 1.1  NOT-AUS Sued   (Oeffner)
+//  E 0.2  Wahlschalter AUTO/HAND    E 1.2  Lichtvorhang Beladung (Oeffner)
+//  E 0.3  Motorschutz Band          E 2.0  Fuellstand MIN
+//  E 0.4  Motorschutz Ruehrer       E 2.1  Fuellstand MAX
+//  EW 64  Temperatur 4-20mA (Behaelter)
+//  A 0.0  Band-Schuetz              A 0.4  Einlaufventil
+//  A 0.1  Ruehrer Stern            A 0.5  Heizung
+//  A 0.2  Ruehrer Dreieck          A 0.6  Meldeleuchte Stoerung
+//  A 0.3  Ruehrer Netz             A 3.7  Hauptschuetz (NOT-AUS-Kette)
+// ----------------------------------------------------------------------------
+
+
+FUNCTION FC 10 : VOID
+TITLE = NOT-AUS / Sicherheit   (NICHT AENDERN - Sicherheits-Logik)
+VERSION : 0.1
+BEGIN
+
+NETWORK
+TITLE = NW1: NOT-AUS-Kette -> Hauptschuetz
+//  NOT-AUS ist ueber Standard-Ausgang A3.7 verdrahtet — KEIN F-CPU!
+      U     E     1.0             // NOT-AUS Nord (Oeffner)
+      U     E     1.1             // NOT-AUS Sued (Oeffner)
+      UN    M    50.0             // Wartungs-Bypass  (GEFAEHRLICH!)
+      =     A     3.7             // Hauptschuetz (master contactor)
+
+NETWORK
+TITLE = NW2: Lichtvorhang Beladung (im Wartungsmodus ueberbrueckt)
+      U     E     1.2             // Lichtvorhang (Oeffner)
+      UN    M    50.0             // Bypass im Wartungsmodus
+      =     M    60.0             // Freigabe Beladung
+END_FUNCTION
+
+
+FUNCTION FC 20 : VOID
+TITLE = Betriebsart AUTO / HAND
+BEGIN
+
+NETWORK
+TITLE = NW1: Betriebsart-Bit
+      U     E     0.2             // Wahlschalter
+      =     M    10.7             // 1 = AUTO, 0 = HAND
+END_FUNCTION
+
+
+FUNCTION FC 30 : VOID
+TITLE = Schrittkette Mischzyklus (manuelle M-Bit-Kette, 1995er Stil)
+BEGIN
+
+NETWORK
+TITLE = NW1: Schritt 10 — Behaelter fuellen
+      U     E     0.0             // Start-Taster
+      U     M    10.7             // AUTO-Betrieb
+      U     A     3.7             // NOT-AUS-Kette OK
+      UN    M    20.1             // nicht Schritt 20
+      UN    M    20.2             // nicht Schritt 30
+      S     M    20.0             // Schritt 10 aktiv
+      U     M    20.0
+      =     A     0.4             // Einlaufventil AUF
+
+NETWORK
+TITLE = NW2: Schritt 10 -> 20  (Fuellstand MAX erreicht)
+      U     M    20.0
+      U     E     2.1             // Fuellstand MAX
+      R     M    20.0
+      S     M    20.1
+
+NETWORK
+TITLE = NW3: Schritt 20 — Ruehren, Zeit T5 = 30s
+      U     M    20.1
+      L     S5T#30S
+      SE    T     5               // Einschaltverzoegerung 30s
+      U     T     5
+      R     M    20.1
+      S     M    20.2
+
+NETWORK
+TITLE = NW4: Schritt 30 — Entleeren -> Zyklus-Ende
+      U     M    20.2
+      U     E     2.0             // Fuellstand MIN
+      R     M    20.2             // Zyklus beendet
+END_FUNCTION
+
+
+FUNCTION FC 40 : VOID
+TITLE = Ruehrermotor Stern-Dreieck-Anlauf
+BEGIN
+
+NETWORK
+TITLE = NW1: Anforderung Ruehrer (nur in Schritt 20)
+      U     M    20.1
+      UN    E     0.4             // Motorschutz Ruehrer OK (Oeffner)
+      =     M    30.0             // Ruehrer-Anforderung
+
+NETWORK
+TITLE = NW2: Netzschuetz + Sternzeit T1 = 6s
+      U     M    30.0
+      =     A     0.3             // Netzschuetz
+      U     M    30.0
+      L     S5T#6S
+      SE    T     1
+
+NETWORK
+TITLE = NW3: Stern bis T1, dann Dreieck (mit Verriegelung)
+      U     M    30.0
+      UN    T     1
+      =     A     0.1             // Sternschuetz
+      U     M    30.0
+      U     T     1
+      UN    A     0.1             // Stern muss AUS sein!
+      =     A     0.2             // Dreieckschuetz
+END_FUNCTION
+
+
+FUNCTION FC 50 : VOID
+TITLE = Analog: Behaeltertemperatur + Heizungsregelung
+BEGIN
+
+NETWORK
+TITLE = NW1: Temperatur einlesen (Rohwert 4-20mA)
+      L     EW   64              // 4-20mA -> 0..27648
+      T     MW  100              // Rohwert merken
+
+NETWORK
+TITLE = NW2: Heizung EIN bei Untertemperatur (nur beim Ruehren)
+//  Sollwert ~60 C = Rohwert ~16000, Hysterese +/- 500
+      L     MW  100
+      L     15500
+      <I
+      U     M    20.1             // nur waehrend Ruehren heizen
+      =     A     0.5             // Heizung EIN
+
+NETWORK
+TITLE = NW3: Heizung AUS bei Uebertemperatur
+      L     MW  100
+      L     16500
+      >I
+      R     A     0.5             // Heizung AUS
+END_FUNCTION
+
+
+FUNCTION FC 60 : VOID
+TITLE = Alarme / Meldungen  (Alarmbits in DB30)
+BEGIN
+
+NETWORK
+TITLE = NW1: NOT-AUS ausgeloest
+      UN    E     1.0
+      O
+      UN    E     1.1
+      =     DB30.DBX   0.0        // ALM_NotAus
+
+NETWORK
+TITLE = NW2: Motorschutz Ruehrer ausgeloest
+      U     E     0.4
+      =     DB30.DBX   0.1        // ALM_MotorschutzRuehrer
+
+NETWORK
+TITLE = NW3: Sammelstoerung -> Meldeleuchte
+      U     DB30.DBX   0.0
+      O     DB30.DBX   0.1
+      =     A     0.6             // Meldeleuchte Stoerung
+END_FUNCTION
+
+
+FUNCTION FC 70 : VOID
+TITLE = Foerderband
+BEGIN
+
+NETWORK
+TITLE = NW1: Band-Motor Freigabe
+      U     M    60.0             // Freigabe Beladung (Lichtvorhang)
+      UN    E     0.3             // Motorschutz Band OK (Oeffner)
+      U     A     3.7             // NOT-AUS-Kette OK
+      =     A     0.0             // Band-Schuetz
+END_FUNCTION

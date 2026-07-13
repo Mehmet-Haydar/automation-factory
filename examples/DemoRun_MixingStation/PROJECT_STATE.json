@@ -1,0 +1,23 @@
+{
+  "data_classification": "PUBLIC",
+  "project_name": "DemoRun_MixingStation",
+  "project_type": "retrofit",
+  "rd_verifications": {
+    "RD01": {
+      "reviewed": true,
+      "locked": false,
+      "reviewed_by": "Demo Engineer",
+      "reviewed_at": "2026-07-12",
+      "author": "ai_preanalysis (deepseek-chat)",
+      "content_hash": "c772d50418be6f6bb484032b6eae40037f697ff6995a219eeb87b55d2e2a7ec7"
+    },
+    "RD03": {
+      "reviewed": true,
+      "locked": false,
+      "reviewed_by": "Demo Engineer",
+      "reviewed_at": "2026-07-12",
+      "author": "ai_preanalysis (deepseek-chat)",
+      "content_hash": "534d436442d0c6c6f8011618c968d274219f4d44063e184f061872bb5c150a16"
+    }
+  }
+}

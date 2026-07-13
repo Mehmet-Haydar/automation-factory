@@ -47,6 +47,22 @@ If any of it is useful to you, take it. Feedback and corrections welcome.
 
 ---
 
+## 🎬 Demo — see it work
+
+The [`examples/DemoRun_MixingStation/`](examples/DemoRun_MixingStation/) project was produced **live, end-to-end**: synthetic S7-300 legacy code → 14-Point Requirements Pack → library-first SCL → **imported and compiled in a real TIA Portal V19**.
+
+| 14-Point Pack (project dashboard) | Safety analysis — certified-engineer sign-off (RD05) |
+|:---:|:---:|
+| ![Dashboard](docs/img/demo/02_dashboard.png) | ![RD05 safety](docs/img/demo/10_rd05_safety_table.png) |
+| **Human-in-the-loop gate lock (Gate 3)** | **Editable IO list (RD01)** |
+| ![Gate-3 lock](docs/img/demo/14_gate3_reconciliation.png) | ![IO list](docs/img/demo/08_rd01_io_list.png) |
+| **Generated SCL, compiled in TIA Portal V19** | **IO tags imported into TIA** |
+| ![OB_Main in TIA](docs/img/demo/23_tia_ob_main_code.png) | ![TIA IO tags](docs/img/demo/24_tia_io_tags.png) |
+
+*The AI drafts every requirement doc as `DRAFT_UNVERIFIED`; SIL/PLr is never guessed; the gate lock cannot advance until the critical docs carry a named engineer approval. See the [demo project README](examples/DemoRun_MixingStation/README.md).*
+
+---
+
 ## 🎯 Is this tool right for you?
 
 Honest scope, before you invest an afternoon:
