@@ -1,5 +1,5 @@
 ---
-title: RD02 — Veri Sözlüğü
+title: RD02 — Data Dictionary
 project: Kunde_Mueller_Conveyor_Retrofit
 project_id: KMG-2026-001
 generated: 2026-05-16
@@ -30,11 +30,11 @@ status: DRAFT
 source_quality: AWL_PARTIAL_SNIPPET
 ```
 
-## 1. Özet
+## 1. Summary
 
 | Kennzahl | Wert |
 |----------|------|
-| **Toplam değişken (snippet)** | 8 |
+| **Total variables (snippet)** | 8 |
 | **GlobalDB** | 3 |
 | **InstanceDB** | 0 |
 | **UDT** | 0 |
@@ -45,7 +45,7 @@ source_quality: AWL_PARTIAL_SNIPPET
 
 **Hinweis:** Demo-RD01 nennt ~47 IO-Signale; RD02 listet nur **interne** Speicher aus dem Parser-Snippet. Vollständige DB-Struktur (DB10/DB30 Restbytes, Instance-DBs, Rezept-Zähler) fehlt in `_parsed.md` → #UNKNOWNS.
 
-## 2. Değişkenler
+## 2. Variables
 
 | VarName | Scope | ParentBlock | Type | Offset | InitValue | Retain | Description | LinkedTag | OldVar | Notes | Status |
 |---------|-------|-------------|------|--------|-----------|--------|-------------|-----------|--------|-------|--------|
@@ -94,7 +94,7 @@ source_quality: AWL_PARTIAL_SNIPPET
 
 ## #UNKNOWNS
 
-| Eski VarName / Adresse | ParentBlock | Sebep |
+| Old VarName / Address | ParentBlock | Reason |
 |------------------------|-------------|-------|
 | DB10.DBX0.0 | DB10 | Im Snippet nicht referenziert; vollständige Bitkarte fehlt (UNK-005) |
 | DB10 (Rest) | DB10 | Wortlänge, weitere Modi/Rezept-Felder — nur Demo-RD02-Entwurf (~32 Vars) spekulativ |

@@ -92,7 +92,7 @@ VERSION : 1.0.0
       s_tonFbkDebounce  : TON;              // Entprellung Rücklauf-Verlust im Lauf
       s_tonRunTick      : TON;              // 1-Sekunden-Takt für scanunabhängige Laufzeit
       // === Diagnose / Zähler ===
-      s_bInternalRunReq : Bool := FALSE;    // İç çalışma talebi (RD10: stat_bInternalRunReq)
+      s_bInternalRunReq : Bool := FALSE;    // Interne Laufanforderung (RD10: stat_bInternalRunReq)
       s_bInitialized    : Bool := FALSE;    // Erststart-Init-Flag
       s_dRunSecs        : DInt := 0;        // Interner Laufzeit-Sekundenzähler
       s_nErrorCount     : DInt := 0;        // Gesamtzahl Störungsereignisse

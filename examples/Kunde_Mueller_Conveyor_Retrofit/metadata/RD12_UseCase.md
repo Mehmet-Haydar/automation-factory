@@ -1,21 +1,21 @@
 ---
-title: RD12_UseCase — Kunde Müller (placeholder, müşteri workshop bekliyor)
+title: RD12_UseCase — Kunde Müller (placeholder, awaiting customer workshop)
 last_validated: 2026-05
 status: ACTIVE
 ---
 
-# RD12_UseCase — Kunde Müller (placeholder, müşteri workshop bekliyor)
+# RD12_UseCase — Kunde Müller (placeholder, awaiting customer workshop)
 
 ```yaml
 status: DRAFT (25%)
 workshop_pending: 2026-05-25
 ```
 
-## Özet (workshop sonrası genişleyecek)
-- AI taslak: 8 use case
-- Operator interview + müşteri workshop ile 15-20'ye çıkacak
+## Summary (to expand after the workshop)
+- AI draft: 8 use cases
+- Expected to grow to 15-20 after operator interview + customer workshop
 
-## Senaryolar (taslak)
+## Scenarios (draft)
 
 | UseCaseID | UseCaseName | Actor | Category | FATTestable | Status |
 |-----------|-------------|-------|----------|-------------|--------|
@@ -28,7 +28,7 @@ workshop_pending: 2026-05-25
 | UC030 | EndOfShift_Shutdown | Operator | Shutdown | Y | DRAFT |
 | UC040 | FilterChange_Procedure | Technician | Maintenance | N | DRAFT |
 
-## UC001 Detay (örnek)
+## UC001 Detail (example)
 
 ```yaml
 UseCaseID: UC001
@@ -40,17 +40,17 @@ Precondition: |
   - PLC RUN
   - Mode != M00 (Emergency)
   - F_DB_EStop.bQ = TRUE (Safety OK)
-  - HMI SCR001 aktif
-  - Recipe seçili (DB_Recipe.iActive > 0)
+  - HMI SCR001 active
+  - A recipe is selected (DB_Recipe.iActive > 0)
 
-Trigger: Operator HMI_BTN_AUTO_START basar
+Trigger: Operator presses HMI_BTN_AUTO_START
 
 Steps:
   1. Operator: HMI_BTN_AUTO_START.click()
   2. System: DB_HMI.bBtn_AutoStart = TRUE
   3. System: FB_ModeMgr → M01 (AUTO) transition
   4. System: FC_Sequence S000 → S010
-  5. System: HMI_LED_MODE → YEŞİL (#00C800)
+  5. System: HMI_LED_MODE → GREEN (#00C800)
 
 Postcondition: |
   - DB_System.ModeState.iCurrentMode = 1
@@ -58,11 +58,11 @@ Postcondition: |
   - DB_Sequence.iActiveStep > 0
 
 Exceptions:
-  - E-Stop basılırsa → M00, ALM0001
-  - Safety_OK=FALSE → senaryo başlamaz, ALM_SAFETY_NOT_OK
+  - If E-Stop is pressed → M00, ALM0001
+  - Safety_OK=FALSE → the scenario does not start, ALM_SAFETY_NOT_OK
 
 FATTestable: Y
-Test: TEST-FAT-001-001 (otomatik test scripti)
+Test: TEST-FAT-001-001 (automated test script)
 ```
 
-*v1.0.0 — Müşteri workshop'ı ile detaylanacak.*
+*v1.0.0 — To be detailed through the customer workshop.*

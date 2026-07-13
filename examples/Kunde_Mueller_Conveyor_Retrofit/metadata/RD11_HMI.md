@@ -11,11 +11,11 @@ status: DRAFT (30%)
 output_language: DE
 ```
 
-## Özet
-- Eski HMI: WinCC Classic V7.4 — 8 ekran (lokal panel)
-- Yeni HMI: TIA WinCC Unified — Hierarchical (4 seviye) + multi-lang
+## Summary
+- Legacy HMI: WinCC Classic V7.4 — 8 screens (local panel)
+- New HMI: TIA WinCC Unified — hierarchical (4 levels) + multi-lang
 
-## Sayfa 1: ScreenList (taslak yeni proje)
+## Page 1: ScreenList (draft for the new project)
 
 | ScreenID | ScreenName | ScreenType | AccessLevel | Title_DE | Title_EN | Title_TR | Status |
 |----------|------------|------------|-------------|----------|----------|----------|--------|
@@ -27,7 +27,7 @@ output_language: DE
 | SCR030 | Trends | Trend | Operator | Trends | Trends | Eğilimler | DRAFT |
 | SCR090 | Diagnostics | Diagnostic | Engineer | Diagnose | Diagnostics | Tanı | DRAFT |
 
-## Sayfa 2: TagList (örnek 4 satır — gerçek 60+)
+## Page 2: TagList (4 example rows shown — 60+ total)
 
 | HMI_TagID | PLC_Tag | ScreenRef | ElementType | Label_DE | Label_EN | ReadWrite | EngUnit | Status |
 |-----------|---------|-----------|-------------|----------|----------|-----------|---------|--------|
@@ -36,4 +36,4 @@ output_language: DE
 | HMI_TT_001_VAL | ANALOG_TT_TK_001 | SCR002 | NumericDisplay | Temperatur | Temperature | Read | °C | DRAFT |
 | HMI_SETPOINT_T01 | DB_Recipe.rTankTempSetpoint | SCR020 | NumericInput | Temperatur-Sollwert | Temperature Setpoint | Write | °C | DRAFT |
 
-*v1.0.0 — Multi-lang text glossary'den türetildi.*
+*v1.0.0 — Derived from the multi-lang text glossary.*

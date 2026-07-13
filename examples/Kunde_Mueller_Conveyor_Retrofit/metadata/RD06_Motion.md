@@ -10,18 +10,18 @@ status: ACTIVE
 status: DRAFT (30%)
 ```
 
-## Özet
-- 1 axis tespit edildi (Conveyor1 — SINAMICS G120 VFD)
-- Servo eksen yok (sadece VFD)
+## Summary
+- 1 axis detected (Conveyor1 — SINAMICS G120 VFD)
+- No servo axis (VFD only)
 
-## Eksenler (taslak)
+## Axes (draft)
 
 | AxisID | AxisName | DriveType | DriveModel | Motor_Tag | Feedback_Tag | EngUnit | HomeMethod | PLCopenFBs | Status |
 |--------|----------|-----------|------------|-----------|--------------|---------|------------|------------|--------|
-| AX001 | Conveyor1_VFD | VFD_Profidrive | SINAMICS G120C | MOT_CV01_001_OUT | (encoder yok, sadece run feedback) | rpm | None | MC_Power, MC_MoveVelocity, MC_Stop | DRAFT |
+| AX001 | Conveyor1_VFD | VFD_Profidrive | SINAMICS G120C | MOT_CV01_001_OUT | (no encoder, run feedback only) | rpm | None | MC_Power, MC_MoveVelocity, MC_Stop | DRAFT |
 
-## Notlar
-- Eski VFD PROFIBUS-DP slave 5 — yeni proje PROFINET'e geçecek (FND004 modernizasyon)
-- Servo gerekmiyor (basit konveyör hareketi)
+## Notes
+- The old VFD is on PROFIBUS-DP slave 5 — the new project migrates to PROFINET (FND004 modernization)
+- No servo needed (simple conveyor motion)
 
-*v1.0.0 — Drive datasheet'ten parametreler eklenecek (Gate 3).*
+*v1.0.0 — Parameters to be added from the drive datasheet (Gate 3).*

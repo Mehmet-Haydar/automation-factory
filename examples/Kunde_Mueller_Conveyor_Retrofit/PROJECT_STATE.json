@@ -132,7 +132,7 @@
   "activity_log": [
     {
       "ts": "2026-05-16 21:14:12",
-      "msg": "Excel batch: 14/14 dönüşüm"
+      "msg": "Excel batch: 14/14 converted"
     },
     {
       "ts": "2026-05-16 21:18:06",
@@ -140,7 +140,7 @@
     },
     {
       "ts": "2026-05-16 22:39:47",
-      "msg": "Proje analizi: %14 ilerlemiş"
+      "msg": "Project analysis: 14% complete"
     },
     {
       "ts": "2026-05-16 22:40:28",
@@ -152,7 +152,7 @@
     },
     {
       "ts": "2026-05-17 18:08:29",
-      "msg": "Proje analizi: %18 ilerlemiş"
+      "msg": "Project analysis: 18% complete"
     }
   ],
   "platform": "S7_300",

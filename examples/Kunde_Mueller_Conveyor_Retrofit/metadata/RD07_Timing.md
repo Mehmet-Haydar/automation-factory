@@ -11,11 +11,11 @@ status: DRAFT (30%)
 plc_cycle_time_ms: 50
 ```
 
-## Özet
-- AI tespit: 8 timer (T1..T8 eski sembol)
-- Watchdog: 2 adet (comm + sequence)
+## Summary
+- AI detected: 8 timers (T1..T8, old symbols)
+- Watchdogs: 2 (comm + sequence)
 
-## Timer'lar
+## Timers
 
 | TimerID | TimerName | TimerType | PresetValue | Function | LinkedStep | LinkedAlarm | IsWatchdog | Status |
 |---------|-----------|-----------|-------------|----------|------------|-------------|-----------|--------|
@@ -27,4 +27,4 @@ plc_cycle_time_ms: 50
 | TMR_CYCLE_HZ1 | System_1Hz | TON | T#500ms | CycleControl | | | N | DRAFT |
 | ... | ... | ... | ... | ... | ... | ... | ... | ... |
 
-*v1.0.0 — Eski S5TIME → IEC TIME dönüşümü yapıldı.*
+*v1.0.0 — Legacy S5TIME → IEC TIME conversion applied.*
