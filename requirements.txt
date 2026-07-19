@@ -27,7 +27,7 @@ rich>=13.0.0,<17.0      # CLI table + colored output (optional but recommended)
 click>=8.4.2,<10.0      # CLI arguments (optional; argparse is enough)
 
 # GUI — web face (factory_web.py): native desktop window + HTML/CSS GUI
-pywebview>=5.0,<7.0     # Desktop window hosting the webgui/ front-end
+pywebview>=6.2.1,<7.0     # Desktop window hosting the webgui/ front-end
 # AI Multi-Provider (for the factory_web.py API mode)
 anthropic>=0.116.0,<1.0  # Claude (Opus, Sonnet, Haiku)
 openai>=1.50.0,<3.0     # GPT-4, GPT-4o, o1 + DeepSeek (OpenAI-compatible API)
