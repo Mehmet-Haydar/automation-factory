@@ -17,7 +17,7 @@ pyyaml>=6.0,<7.0
 
 # Excel conversion (script_md_to_xlsx, script_excel_to_metadata)
 openpyxl>=3.1.0,<4.0
-pandas>=2.0.0,<4.0      # optional but recommended, CSV/XLSX operations
+pandas>=3.0.3,<4.0      # optional but recommended, CSV/XLSX operations
 
 # JSON Schema validation (script_consistency_check)
 jsonschema>=4.17.0,<5.0
