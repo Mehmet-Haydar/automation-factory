@@ -29,7 +29,7 @@ click>=8.4.2,<10.0      # CLI arguments (optional; argparse is enough)
 # GUI — web face (factory_web.py): native desktop window + HTML/CSS GUI
 pywebview>=5.0,<7.0     # Desktop window hosting the webgui/ front-end
 # AI Multi-Provider (for the factory_web.py API mode)
-anthropic>=0.116.0,<1.0  # Claude (Opus, Sonnet, Haiku)
+anthropic>=0.117.0,<1.0  # Claude (Opus, Sonnet, Haiku)
 openai>=1.50.0,<3.0     # GPT-4, GPT-4o, o1 + DeepSeek (OpenAI-compatible API)
 google-genai>=1.0,<3.0            # Google Gemini (new SDK — Gemini 3.5/2.5)
 google-generativeai>=0.8.0,<1.0  # Google Gemini legacy fallback (kept for compat)
