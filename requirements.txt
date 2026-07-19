@@ -32,7 +32,7 @@ pywebview>=5.0,<7.0     # Desktop window hosting the webgui/ front-end
 anthropic>=0.116.0,<1.0  # Claude (Opus, Sonnet, Haiku)
 openai>=1.50.0,<3.0     # GPT-4, GPT-4o, o1 + DeepSeek (OpenAI-compatible API)
 google-genai>=1.0,<3.0            # Google Gemini (new SDK — Gemini 3.5/2.5)
-google-generativeai>=0.8.0,<1.0  # Google Gemini legacy fallback (kept for compat)
+google-generativeai>=0.8.6,<1.0  # Google Gemini legacy fallback (kept for compat)
 
 # Git integration (script_project_init --git)
 gitpython>=3.1.0,<4.0   # optional; the subprocess git command also works
